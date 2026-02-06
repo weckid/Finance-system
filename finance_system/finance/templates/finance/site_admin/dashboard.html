@@ -1,0 +1,172 @@
+{% extends 'finance/site_admin/base.html' %}
+{% load humanize %}
+{% block admin_title %}Статистика{% endblock %}
+{% block admin_heading %}Статистика{% endblock %}
+
+{% block admin_content %}
+<div class="admin-stats-row mb-4">
+    <div class="admin-stat-card">
+            <div class="admin-stat-label">Пользователей</div>
+            <div class="admin-stat-value">{{ users_count }}</div>
+            <div class="admin-stat-note">активных: {{ users_active }}, заблок.: {{ users_blocked }}</div>
+        </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-label">Семей</div>
+        <div class="admin-stat-value">{{ families_count }}</div>
+        <div class="admin-stat-note">&nbsp;</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-label">Целей</div>
+        <div class="admin-stat-value">{{ goals_count }}</div>
+        <div class="admin-stat-note">актив.: {{ goals_active }}, выполн.: {{ goals_completed }}</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-label">Категорий</div>
+        <div class="admin-stat-value">{{ categories_count }}</div>
+        <div class="admin-stat-note">системных: {{ categories_system }}</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-label">Транзакций</div>
+        <div class="admin-stat-value">{{ transactions_count }}</div>
+        <div class="admin-stat-note">доходы: {{ total_income|floatformat:0|intcomma }} ₽, расходы: {{ total_expenses|floatformat:0|intcomma }} ₽</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-label">Пополнений целей</div>
+        <div class="admin-stat-value">{{ contributions_count }}</div>
+        <div class="admin-stat-note">на сумму {{ total_contributions|floatformat:0|intcomma }} ₽</div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="admin-card-header"><i class="bi bi-person-plus me-2"></i>Последние пользователи</div>
+            <div class="card-body p-0">
+                {% if last_users %}
+                <ul class="list-group list-group-flush">
+                    {% for u in last_users %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ u.username }}{% if not u.is_active %} <span class="badge bg-danger">заблок.</span>{% endif %}</span>
+                        <small class="text-muted">{{ u.date_joined|date:"d.m.Y" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0 small">Нет пользователей</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="admin-card-header"><i class="bi bi-people me-2"></i>Последние семьи</div>
+            <div class="card-body p-0">
+                {% if last_families %}
+                <ul class="list-group list-group-flush">
+                    {% for f in last_families %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ f.name }}</span>
+                        <small class="text-muted">{{ f.created_by.username }}, {{ f.created_at|date:"d.m.Y" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0 small">Нет семей</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="admin-card-header"><i class="bi bi-coin me-2"></i>Последние пополнения целей</div>
+            <div class="card-body p-0">
+                {% if last_contributions %}
+                <ul class="list-group list-group-flush">
+                    {% for c in last_contributions %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center small">
+                        <span>{{ c.goal.name|truncatechars:20 }} — {{ c.user.username|default:"—" }}</span>
+                        <strong class="text-success">+{{ c.amount|floatformat:0 }} ₽</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0 small">Нет пополнений</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+        <div class="card">
+            <div class="admin-card-header">Сводка по целям</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Целевая сумма (все цели):</span><strong>{{ total_goals_target|floatformat:0|intcomma }} ₽</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Накоплено:</span><strong>{{ total_goals_current|floatformat:0|intcomma }} ₽</strong></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">Пополнений за всё время:</span><strong>{{ total_contributions|floatformat:0|intcomma }} ₽</strong></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card">
+            <div class="admin-card-header">Сводка по транзакциям</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Всего операций:</span><strong>{{ transactions_count }}</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Доходы:</span><strong class="text-success">{{ total_income|floatformat:0|intcomma }} ₽</strong></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">Расходы:</span><strong class="text-danger">{{ total_expenses|floatformat:0|intcomma }} ₽</strong></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="admin-card-header"><i class="bi bi-bar-chart me-2"></i>Пополнения целей по месяцам (все пользователи)</div>
+    <div class="card-body">
+        <div style="position:relative;height:360px;">
+            <canvas id="siteAdminChart"></canvas>
+        </div>
+        {% if not chart_labels_json or chart_labels_json == '[]' %}
+        <p class="text-muted mt-3 mb-0">Пока нет данных о пополнениях.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    var labels = {{ chart_labels_json|safe }};
+    var data = {{ chart_data_json|safe }};
+    if (typeof labels === 'string') labels = JSON.parse(labels);
+    if (typeof data === 'string') data = JSON.parse(data);
+    var ctx = document.getElementById('siteAdminChart');
+    if (!ctx) return;
+    var hasData = labels && labels.length > 0;
+    if (!hasData) { labels = ['Нет данных']; data = [0]; }
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Сумма (₽)', data: data, backgroundColor: 'rgba(67, 97, 238, 0.7)', borderColor: 'rgb(67, 97, 238)', borderWidth: 2, borderRadius: 6, borderSkipped: false }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 12, right: 20, bottom: 8, left: 12 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    padding: 12,
+                    callbacks: { label: function(ctx) { return ctx.parsed.y.toLocaleString('ru-RU') + ' ₽'; } }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45 } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: function(v) { return v.toLocaleString('ru-RU') + ' ₽'; } } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

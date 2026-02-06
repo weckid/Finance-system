@@ -1,0 +1,39 @@
+{% extends 'finance/base.html' %}
+{% block title %}Редактировать категорию — FinanceIntellect{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'categories_manage' %}">Управление категориями</a></li>
+                    <li class="breadcrumb-item active">Редактировать</li>
+                </ol>
+            </nav>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Редактировать категорию</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'category_edit' category.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Название *</label>
+                            <input type="text" name="name" class="form-control" value="{{ category.name }}" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Цвет</label>
+                            <input type="color" name="color" class="form-control form-control-color" value="{{ category.color }}" style="width: 60px; height: 38px;">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                            <a href="{% url 'categories_manage' %}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

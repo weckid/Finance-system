@@ -1,0 +1,72 @@
+{% extends 'finance/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5">Тарифы</h1>
+    
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-header bg-light">
+                    <h4 class="my-3">Бесплатный</h4>
+                    <h2 class="text-primary">0 ₽<small class="text-muted">/месяц</small></h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>100 транзакций в месяц</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Базовая аналитика</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Ручная категоризация</li>
+                        <li class="mb-3"><i class="bi bi-x text-danger me-2"></i>Автокатегоризация</li>
+                        <li class="mb-3"><i class="bi bi-x text-danger me-2"></i>Семейный доступ</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'auth' %}" class="btn btn-outline-primary w-100">Начать</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="my-3">Профессиональный</h4>
+                    <h2 class="text-white">299 ₽<small>/месяц</small></h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Безлимитные транзакции</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Расширенная аналитика</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Автокатегоризация</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Прогнозы и цели</li>
+                        <li class="mb-3"><i class="bi bi-x text-danger me-2"></i>Семейный доступ</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100" disabled>Скоро</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-header bg-light">
+                    <h4 class="my-3">Семейный</h4>
+                    <h2 class="text-primary">499 ₽<small class="text-muted">/месяц</small></h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Всё из Профессионального</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>До 5 членов семьи</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Общие бюджеты и цели</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Уведомления для всех</li>
+                        <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Приоритетная поддержка</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-outline-primary w-100" disabled>Скоро</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

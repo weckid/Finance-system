@@ -1,0 +1,94 @@
+{% extends 'finance/base.html' %}
+{% load humanize %}
+{% block title %}Админ-панель — Умные финансы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-stat-card { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border-color); }
+    .admin-stat-value { font-size: 1.75rem; font-weight: 700; color: var(--primary); }
+    .chart-container { position: relative; height: 320px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Панель</a></li>
+            <li class="breadcrumb-item active">Админ-панель</li>
+        </ol>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Админ-панель</h1>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">← Панель</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="admin-stat-card">
+                <div class="text-muted small mb-1">Пользователей</div>
+                <div class="admin-stat-value">{{ users_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="admin-stat-card">
+                <div class="text-muted small mb-1">Семей</div>
+                <div class="admin-stat-value">{{ families_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="admin-stat-card">
+                <div class="text-muted small mb-1">Целей всего</div>
+                <div class="admin-stat-value">{{ goals_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="admin-stat-card">
+                <div class="text-muted small mb-1">Целей активных</div>
+                <div class="admin-stat-value">{{ goals_active }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Пополнения целей по месяцам (все пользователи)</h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="siteAdminChart"></canvas>
+            </div>
+            {% if not chart_labels_json or chart_labels_json == '[]' %}
+            <p class="text-muted mt-3 mb-0">Пока нет данных о пополнениях.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    var labels = {{ chart_labels_json|safe }};
+    var data = {{ chart_data_json|safe }};
+    if (typeof labels === 'string') labels = JSON.parse(labels);
+    if (typeof data === 'string') data = JSON.parse(data);
+    var ctx = document.getElementById('siteAdminChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Сумма (₽)', data: data, backgroundColor: 'rgba(67, 97, 238, 0.6)', borderColor: 'rgb(67, 97, 238)', borderWidth: 1 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: function(v) { return v.toLocaleString('ru-RU') + ' ₽'; } } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

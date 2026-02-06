@@ -1,0 +1,330 @@
+{% extends 'finance/base.html' %}
+
+{% block title %}Редактирование цели - Умные финансы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .edit-goal-page {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+
+    .goal-form-card {
+        max-width: 600px;
+        width: 100%;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+    }
+
+    .goal-form-header {
+        padding: 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05));
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .goal-form-content {
+        padding: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        background: white;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        outline: none;
+    }
+
+    .error-message {
+        color: var(--danger);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .help-text {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    .goal-stats {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(67, 97, 238, 0.02));
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .progress-container {
+        margin: 1rem 0;
+    }
+
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        background-color: var(--border-color);
+    }
+
+    .progress-bar {
+        background-color: var(--primary);
+        border-radius: 4px;
+    }
+
+    .add-money-section {
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.05), rgba(40, 167, 69, 0.02));
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border: 1px solid rgba(40, 167, 69, 0.1);
+    }
+
+    .add-money-title {
+        color: var(--success);
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .quick-amount-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .quick-amount-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .quick-amount-btn:hover {
+        background: rgba(67, 97, 238, 0.05);
+        border-color: var(--primary);
+    }
+
+    .quick-amount-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-goal-page">
+    <div class="goal-form-card">
+        <!-- Заголовок формы -->
+        <div class="goal-form-header">
+            <div style="width: 60px; height: 60px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: white; font-size: 1.5rem;">
+                <i class="bi bi-bullseye"></i>
+            </div>
+            <h3 class="mb-2">Редактирование цели</h3>
+            <p class="text-muted mb-0">{{ goal.name }}</p>
+        </div>
+
+        <!-- Содержимое формы -->
+        <div class="goal-form-content">
+            <!-- Сообщения об ошибках -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    <div class="d-flex align-items-center">
+                        {% if message.tags == 'success' %}
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif message.tags == 'error' %}
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        {% else %}
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Статистика цели -->
+            <div class="goal-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Текущая сумма:</span>
+                    <span class="stat-value">{{ goal.current_amount|floatformat:0 }} ₽</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Целевая сумма:</span>
+                    <span class="stat-value">{{ goal.target_amount|floatformat:0 }} ₽</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Осталось:</span>
+                    <span class="stat-value">{{ goal.remaining_amount|floatformat:0 }} ₽</span>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="stat-label">Прогресс:</span>
+                        <span class="stat-value">{{ goal.progress_percentage|floatformat:1 }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: {{ goal.progress_percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Форма для редактирования цели -->
+            <form method="post" id="editGoalForm">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="edit_goal">
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Название цели *</label>
+                            <input type="text"
+                                   name="{{ form.name.name }}"
+                                   id="{{ form.name.id_for_label }}"
+                                   class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                                   value="{{ form.name.value|default:goal.name }}"
+                                   required>
+                            {% if form.name.errors %}
+                            <div class="error-message">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.goal_type.id_for_label }}" class="form-label">Тип цели *</label>
+                            <select name="{{ form.goal_type.name }}"
+                                    id="{{ form.goal_type.id_for_label }}"
+                                    class="form-select {% if form.goal_type.errors %}is-invalid{% endif %}"
+                                    required>
+                                <option value="savings" {% if form.goal_type.value == 'savings' or goal.goal_type == 'savings' %}selected{% endif %}>Накопления</option>
+                                <option value="debt" {% if form.goal_type.value == 'debt' or goal.goal_type == 'debt' %}selected{% endif %}>Погашение долга</option>
+                                <option value="investment" {% if form.goal_type.value == 'investment' or goal.goal_type == 'investment' %}selected{% endif %}>Инвестиции</option>
+                                <option value="purchase" {% if form.goal_type.value == 'purchase' or goal.goal_type == 'purchase' %}selected{% endif %}>Крупная покупка</option>
+                                <option value="travel" {% if form.goal_type.value == 'travel' or goal.goal_type == 'travel' %}selected{% endif %}>Путешествие</option>
+                                <option value="education" {% if form.goal_type.value == 'education' or goal.goal_type == 'education' %}selected{% endif %}>Образование</option>
+                                <option value="other" {% if form.goal_type.value == 'other' or goal.goal_type == 'other' %}selected{% endif %}>Другое</option>
+                            </select>
+                            {% if form.goal_type.errors %}
+                            <div class="error-message">{{ form.goal_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.target_amount.id_for_label }}" class="form-label">Целевая сумма (₽) *</label>
+                            <input type="number"
+                                   name="{{ form.target_amount.name }}"
+                                   id="{{ form.target_amount.id_for_label }}"
+                                   class="form-control {% if form.target_amount.errors %}is-invalid{% endif %}"
+                                   value="{{ form.target_amount.value|default:goal.target_amount }}"
+                                   step="0.01"
+                                   min="1"
+                                   required>
+                            {% if form.target_amount.errors %}
+                            <div class="error-message">{{ form.target_amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.deadline.id_for_label }}" class="form-label">Срок выполнения *</label>
+                            <input type="date"
+                                   name="{{ form.deadline.name }}"
+                                   id="{{ form.deadline.id_for_label }}"
+                                   class="form-control {% if form.deadline.errors %}is-invalid{% endif %}"
+                                   value="{{ form.deadline.value|date:'Y-m-d'|default:goal.deadline|date:'Y-m-d' }}"
+                                   required>
+                            {% if form.deadline.errors %}
+                            <div class="error-message">{{ form.deadline.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">Описание цели</label>
+                    <textarea name="{{ form.description.name }}"
+                              id="{{ form.description.id_for_label }}"
+                              class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                              rows="4">{{ form.description.value|default:goal.description }}</textarea>
+                    {% if form.description.errors %}
+                    <div class="error-message">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.replenishment_frequency.id_for_label }}" class="form-label">Обязательное пополнение</label>
+                    <select name="{{ form.replenishment_frequency.name }}"
+                            id="{{ form.replenishment_frequency.id_for_label }}"
+                            class="form-select {% if form.replenishment_frequency.errors %}is-invalid{% endif %}">
+                        <option value="" {% if not goal.replenishment_frequency %}selected{% endif %}>Без обязательного графика</option>
+                        <option value="daily" {% if goal.replenishment_frequency == 'daily' %}selected{% endif %}>Раз в день</option>
+                        <option value="every_2_days" {% if goal.replenishment_frequency == 'every_2_days' %}selected{% endif %}>Раз в 2 дня</option>
+                        <option value="every_3_days" {% if goal.replenishment_frequency == 'every_3_days' %}selected{% endif %}>Раз в 3 дня</option>
+                        <option value="weekly" {% if goal.replenishment_frequency == 'weekly' %}selected{% endif %}>Раз в неделю</option>
+                        <option value="monthly" {% if goal.replenishment_frequency == 'monthly' %}selected{% endif %}>Раз в месяц</option>
+                    </select>
+                    {% if form.replenishment_frequency.errors %}
+                    <div class="error-message">{{ form.replenishment_frequency.errors.0 }}</div>
+                    {% endif %}
+                    <div class="help-text">Когда нужно напоминать о пополнении цели</div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-check-circle me-2"></i>Сохранить изменения
+                    </button>
+                    <a href="{{ redirect_after|default:'/dashboard/?tab=goals' }}" class="btn btn-outline-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

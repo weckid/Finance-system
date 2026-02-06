@@ -1,0 +1,67 @@
+{% extends 'finance/base.html' %}
+{% block title %}Мои семьи — FinanceIntellect{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Мои семьи</h1>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('createFamilyForm').style.display=document.getElementById('createFamilyForm').style.display?'none':'block';">
+            <i class="bi bi-plus-circle me-2"></i>Создать семью
+        </button>
+    </div>
+
+    <div class="card mb-4" id="createFamilyForm" style="display: {% if show_create_form %}block{% else %}none{% endif %};">
+        <div class="card-header"><h5 class="mb-0">Новая семья</h5></div>
+        <div class="card-body">
+            <form method="post" action="{% url 'family_create' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Название семьи *</label>
+                    <input type="text" name="name" class="form-control" placeholder="Например: Семья Ивановых" required maxlength="100" value="{{ form.name.value|default:'' }}">
+                    {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors.0 }}</div>{% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">Создать</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('createFamilyForm').style.display='none';">Отмена</button>
+            </form>
+        </div>
+    </div>
+
+    {% if families_with_avatars %}
+    <div class="row g-4">
+        {% for family, family_avatar_url in families_with_avatars %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if family_avatar_url %}
+                        <img src="{{ family_avatar_url }}" alt="{{ family.name }}" class="rounded-circle me-3" style="width: 48px; height: 48px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                            <i class="bi bi-people-fill text-primary"></i>
+                        </div>
+                        {% endif %}
+                        <h5 class="card-title mb-0">{{ family.name }}</h5>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Участников: {{ family.members.count }}
+                    </p>
+                    <a href="{% url 'family_detail' family.id %}" class="btn btn-outline-primary btn-sm">
+                        Открыть семью
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+            <h4 class="mt-3 mb-2">Нет семей</h4>
+            <p class="text-muted mb-4">Создайте семью, чтобы вместе копить на цели</p>
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('createFamilyForm').style.display='block';">Создать семью</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

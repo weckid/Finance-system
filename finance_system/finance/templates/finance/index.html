@@ -1,0 +1,144 @@
+{% extends 'finance/base.html' %}
+
+{% block content %}
+<!-- Герой секция -->
+<section class="py-6">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <span class="badge bg-primary text-white mb-3" style="padding: 0.5rem 1rem; border-radius: 20px;">Новое поколение финансов</span>
+                <h1 class="display-4 fw-bold mb-4">
+                    Управляйте финансами<br>
+                    <span class="text-primary">с умом и просто</span>
+                </h1>
+                <p class="lead mb-5 text-muted">
+                    Интеллектуальная система для современного управления деньгами.
+                    Удобный интерфейс, мощные инструменты и умная аналитика в одном месте.
+                </p>
+
+                <div class="d-flex flex-wrap gap-3">
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'auth' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Начать бесплатно
+                    </a>
+                    <a href="{% url 'features' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-play-circle me-2"></i>Узнать больше
+                    </a>
+                    {% else %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-speedometer2 me-2"></i>Перейти в панель
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-graph-up-arrow text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="text-center mb-4">Умный анализ расходов</h4>
+                        <p class="text-center text-muted mb-4">
+                            Автоматическая категоризация транзакций и наглядная статистика
+                        </p>
+                        <div class="d-flex justify-content-center">
+                            <div class="text-center mx-4">
+                                <h3 class="text-primary">95%</h3>
+                                <small class="text-muted">Точность категоризации</small>
+                            </div>
+                            <div class="text-center mx-4">
+                                <h3 class="text-success">+24%</h3>
+                                <small class="text-muted">Экономия</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Возможности -->
+<section class="py-6 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="mb-3">Основные возможности</h2>
+            <p class="lead text-muted">Все необходимое для управления финансами</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="icon-wrapper mb-4">
+                            <i class="bi bi-robot text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Автокатегоризация</h4>
+                        <p class="text-muted">
+                            Искусственный интеллект автоматически определяет категории ваших расходов
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="icon-wrapper mb-4">
+                            <i class="bi bi-graph-up-arrow text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Статистика</h4>
+                        <p class="text-muted">
+                            Подробные отчеты и визуализация ваших доходов и расходов
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="icon-wrapper mb-4">
+                            <i class="bi bi-people text-info" style="font-size: 2rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Семейный бюджет</h4>
+                        <p class="text-muted">
+                            Совместное управление финансами с членами семьи
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Призыв к действию -->
+<section class="py-6">
+    <div class="container">
+        <div class="card bg-primary text-white border-0">
+            <div class="card-body p-5">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h3 class="text-white mb-3">Готовы начать управлять финансами?</h3>
+                        <p class="text-white mb-0 opacity-75">
+                            Присоединяйтесь к пользователям, которые уже контролируют свои деньги
+                        </p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        {% if not user.is_authenticated %}
+                        <a href="{% url 'auth' %}" class="btn btn-light btn-lg">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Начать сейчас
+                        </a>
+                        {% else %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                            <i class="bi bi-speedometer2 me-2"></i>В панель управления
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,365 @@
+{% extends 'finance/base.html' %}
+
+{% block title %}Возможности - Умные финансы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wide-page {
+        max-width: 100%;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+
+    .container-wide {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    .py-6 {
+        padding-top: 4rem !important;
+        padding-bottom: 4rem !important;
+    }
+
+    /* Упрощенные карточки */
+    .feature-card-simple {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s ease;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .feature-card-simple:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        border-color: #cbd5e0;
+    }
+
+    .feature-card-simple .card-body {
+        padding: 2rem;
+    }
+
+    /* Иконки */
+    .icon-circle {
+        width: 70px;
+        height: 70px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.08), rgba(67, 97, 238, 0.04));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+    }
+
+    /* Отступы между секциями */
+    .section-spacing {
+        margin-top: 5rem;
+        margin-bottom: 5rem;
+    }
+
+    .section-spacing-sm {
+        margin-top: 3rem;
+        margin-bottom: 3rem;
+    }
+
+    /* Герой секция */
+    .hero-section-simple {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        margin-bottom: 3rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* Списки */
+    .list-simple {
+        padding: 0;
+        margin: 0;
+    }
+
+    .list-simple li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .list-simple li:last-child {
+        border-bottom: none;
+    }
+
+    /* CTA секция */
+    .cta-section-simple {
+        background: linear-gradient(135deg, #4361ee 0%, #3a56d4 100%);
+        border-radius: 20px;
+        padding: 3rem;
+        color: white;
+    }
+
+    /* Текст */
+    .text-muted-light {
+        color: #64748b;
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wide-page">
+    <div class="container-wide py-6">
+        <!-- Герой секция -->
+        <div class="row align-items-center hero-section-simple">
+            <div class="col-lg-6">
+                <span class="badge bg-primary bg-opacity-10 text-primary mb-3" style="padding: 0.5rem 1.5rem; border-radius: 12px; font-weight: 500;">Новое поколение финансов</span>
+                <h1 class="display-4 fw-bold mb-4" style="line-height: 1.2;">
+                    Управляйте финансами<br>
+                    <span class="text-primary">с умом и просто</span>
+                </h1>
+                <p class="lead text-muted-light mb-5">
+                    Интеллектуальная система для современного управления деньгами.
+                    Удобный интерфейс, мощные инструменты и умная аналитика в одном месте.
+                </p>
+
+                <div class="d-flex flex-wrap gap-3">
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'auth' %}" class="btn btn-primary btn-lg" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Начать бесплатно
+                    </a>
+                    <a href="#features" class="btn btn-outline-primary btn-lg" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                        <i class="bi bi-play-circle me-2"></i>Узнать больше
+                    </a>
+                    {% else %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                        <i class="bi bi-speedometer2 me-2"></i>Перейти в панель
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-6 mt-4 mt-lg-0">
+                <div class="feature-card-simple">
+                    <div class="card-body">
+                        <div class="icon-circle">
+                            <i class="bi bi-graph-up-arrow text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h4 class="text-center mb-4" style="font-weight: 600;">Проект разработан для</h4>
+                        <ul class="list-unstyled text-muted-light list-simple">
+                            <li class="mb-3">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Студентов и молодых специалистов
+                            </li>
+                            <li class="mb-3">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Семей, ведущих совместный бюджет
+                            </li>
+                            <li class="mb-3">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Фрилансеров и предпринимателей
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Всех, кто хочет контролировать свои финансы
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основные возможности -->
+        <div class="section-spacing" id="features">
+            <div class="text-center mb-5">
+                <h2 class="mb-3" style="font-weight: 700;">Основные возможности системы</h2>
+                <p class="lead text-muted-light mb-0">Все необходимое для современного управления финансами</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card-simple h-100">
+                        <div class="card-body text-center">
+                            <div class="icon-circle">
+                                <i class="bi bi-robot text-primary" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-3" style="font-weight: 600;">Автоматическая категоризация</h4>
+                            <p class="text-muted-light">
+                                Искусственный интеллект анализирует ваши транзакции и автоматически определяет категории расходов.
+                                Система обучается на ваших данных и со временем становится точнее.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card-simple h-100">
+                        <div class="card-body text-center">
+                            <div class="icon-circle">
+                                <i class="bi bi-graph-up-arrow text-success" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-3" style="font-weight: 600;">Прогнозирование и аналитика</h4>
+                            <p class="text-muted-light">
+                                Получайте прогнозы расходов на основе ваших финансовых привычек.
+                                Детальная статистика и визуализация помогают понять, куда уходят деньги.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card-simple h-100">
+                        <div class="card-body text-center">
+                            <div class="icon-circle">
+                                <i class="bi bi-people text-info" style="font-size: 2rem;"></i>
+                            </div>
+                            <h4 class="mb-3" style="font-weight: 600;">Семейный бюджет</h4>
+                            <p class="text-muted-light">
+                                Совместное управление финансами с членами семьи.
+                                Разные уровни доступа, общие цели и бюджеты для всей семьи.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Дополнительные возможности -->
+        <div class="section-spacing-sm">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="feature-card-simple h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="icon-circle" style="width: 50px; height: 50px; margin-right: 1rem;">
+                                    <i class="bi bi-bell text-warning" style="font-size: 1.25rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-2" style="font-weight: 600;">Умные уведомления</h5>
+                                    <p class="text-muted-light">
+                                        Своевременные оповещения о превышении бюджета, регулярных платежах
+                                        и достижении финансовых целей.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="feature-card-simple h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="icon-circle" style="width: 50px; height: 50px; margin-right: 1rem;">
+                                    <i class="bi bi-phone text-primary" style="font-size: 1.25rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-2" style="font-weight: 600;">Мобильность</h5>
+                                    <p class="text-muted-light">
+                                        Полностью адаптивный дизайн для всех устройств.
+                                        Управляйте финансами с компьютера, планшета или смартфона.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Технические особенности -->
+        <div class="section-spacing">
+            <div class="feature-card-simple">
+                <div class="card-body p-4">
+                    <h3 class="text-center mb-4" style="font-weight: 700;">Технические особенности проекта</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="icon-circle" style="width: 45px; height: 45px; margin-right: 1rem;">
+                                    <i class="bi bi-shield-check text-success" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 style="font-weight: 600;">Безопасность</h5>
+                                    <p class="text-muted-light">
+                                        Шифрование данных, безопасное хранение паролей, защита от
+                                        несанкционированного доступа. Ваши финансовые данные в безопасности.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="icon-circle" style="width: 45px; height: 45px; margin-right: 1rem;">
+                                    <i class="bi bi-lightning-charge text-warning" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 style="font-weight: 600;">Производительность</h5>
+                                    <p class="text-muted-light">
+                                        Оптимизированный код, быстрая загрузка страниц, минимальное
+                                        потребление ресурсов. Работает быстро даже на слабых устройствах.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="icon-circle" style="width: 45px; height: 45px; margin-right: 1rem;">
+                                    <i class="bi bi-arrow-left-right text-primary" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 style="font-weight: 600;">Импорт/Экспорт</h5>
+                                    <p class="text-muted-light">
+                                        Поддержка всех популярных форматов: CSV, Excel, PDF.
+                                        Легко импортируйте данные из банковских выписок и экспортируйте отчеты.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="icon-circle" style="width: 45px; height: 45px; margin-right: 1rem;">
+                                    <i class="bi bi-database text-info" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 style="font-weight: 600;">Гибкая архитектура</h5>
+                                    <p class="text-muted-light">
+                                        Модульная архитектура позволяет легко добавлять новые функции
+                                        и интеграции с банковскими системами.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Призыв к действию -->
+        <div class="section-spacing">
+            <div class="cta-section-simple">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h3 class="text-white mb-3" style="font-weight: 700;">Начните управлять финансами с умом</h3>
+                        <p class="text-white mb-0 opacity-90">
+                            Присоединяйтесь к пользователям, которые уже контролируют свои деньги
+                            с помощью современной и удобной системы.
+                        </p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        {% if not user.is_authenticated %}
+                        <a href="{% url 'auth' %}" class="btn btn-light btn-lg" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Начать сейчас
+                        </a>
+                        {% else %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                            <i class="bi bi-speedometer2 me-2"></i>В панель управления
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

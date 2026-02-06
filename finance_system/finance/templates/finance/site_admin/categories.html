@@ -1,0 +1,43 @@
+{% extends 'finance/site_admin/base.html' %}
+{% block admin_title %}Категории{% endblock %}
+{% block admin_heading %}Категории{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0">Всего: {{ categories|length }}</p>
+    <a href="{% url 'admin_category_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Создать категорию</a>
+</div>
+<div class="card">
+    <div class="admin-card-header"><i class="bi bi-tags me-2"></i>Категории</div>
+    <div class="table-responsive">
+        <table class="table table-hover admin-table mb-0">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Тип</th>
+                    <th>Системная</th>
+                    <th>Владелец</th>
+                    <th>Цвет</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in categories %}
+                <tr>
+                    <td>{{ c.name }}</td>
+                    <td>{{ c.get_type_display }}</td>
+                    <td>{% if c.is_system %}<span class="badge bg-primary">Да</span>{% else %}Нет{% endif %}</td>
+                    <td>{{ c.owner.username|default:"—" }}</td>
+                    <td><span style="display:inline-block;width:16px;height:16px;background:{{ c.color }};border-radius:4px;"></span> {{ c.color }}</td>
+                    <td>
+                        <a href="{% url 'admin_category_delete' c.pk %}" class="btn btn-outline-danger btn-sm" title="Удалить"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-muted text-center py-4">Нет категорий</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

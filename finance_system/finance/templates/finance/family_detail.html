@@ -1,0 +1,436 @@
+{% extends 'finance/base.html' %}
+{% load humanize %}
+{% block title %}{{ family.name }} — Умные финансы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .family-goal-card { border: 1px solid var(--border-color); border-radius: var(--border-radius); transition: transform 0.2s ease, box-shadow 0.2s ease; background: linear-gradient(180deg, #fff 0%, #fafbff 100%); }
+    .family-goal-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .family-goal-card .progress { height: 10px; border-radius: 5px; }
+    .family-goal-card .progress-bar { background: linear-gradient(90deg, var(--primary), #5b7cff); transition: width 0.6s ease-out; }
+    /* Flip card для целей — стилизованная карточка */
+    .goal-flip-wrapper { perspective: 1000px; min-height: 340px; }
+    .goal-flip-inner { position: relative; width: 100%; height: 100%; min-height: 340px; transition: transform 0.5s ease; transform-style: preserve-3d; }
+    .goal-flip-wrapper.flipped .goal-flip-inner { transform: rotateY(180deg); }
+    .goal-flip-front, .goal-flip-back { position: absolute; width: 100%; height: 100%; top: 0; left: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    .goal-flip-front { background: #fff; }
+    .goal-flip-back {
+        transform: rotateY(180deg);
+        background: linear-gradient(160deg, #e0e7ff 0%, #c7d2fe 30%, #a5b4fc 60%, #818cf8 100%);
+        padding: 1.5rem;
+        overflow-y: auto;
+        border: 1px solid rgba(67, 97, 238, 0.2);
+        box-shadow: inset 0 2px 10px rgba(255,255,255,0.3);
+    }
+    .goal-flip-back .flip-back-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #312e81; margin-bottom: 0.5rem; font-weight: 600; }
+    .goal-flip-back .flip-back-desc { font-size: 0.9rem; line-height: 1.5; color: #1e1b4b; margin-bottom: 1.25rem; white-space: pre-wrap; }
+    .goal-flip-back .flip-back-schedule { font-size: 0.9rem; color: #1e293b; font-weight: 600; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.7); border-radius: 8px; display: inline-block; }
+    .goal-flip-btn { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #fff; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .goal-flip-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: scale(1.05); }
+    .goal-card-header { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1rem; }
+    .goal-card-title-wrap { flex: 1; min-width: 0; }
+    .goal-card-actions { flex-shrink: 0; display: flex; gap: 0.25rem; }
+    /* Блок выбора периода для графика */
+    .chart-period-filter {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+    }
+    .chart-period-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem 1rem;
+    }
+    .chart-period-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+    }
+    .chart-period-label i { color: var(--primary); }
+    .chart-period-select {
+        min-width: 180px;
+        max-width: 220px;
+        font-size: 0.9rem;
+        border-radius: 8px;
+        border-color: #cbd5e1;
+    }
+    .chart-period-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15); }
+    .chart-period-sep {
+        color: #94a3b8;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .chart-period-btn {
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+    }
+    @media (max-width: 576px) {
+        .chart-period-form { flex-direction: column; align-items: stretch; }
+        .chart-period-select { max-width: none; }
+        .chart-period-sep { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            {% if family_avatar_url %}
+            <img src="{{ family_avatar_url }}" alt="{{ family.name }}" class="rounded-circle" style="width:56px;height:56px;object-fit:cover;border:2px solid var(--border-color);">
+            {% else %}
+            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width:56px;height:56px;"><i class="bi bi-people text-muted"></i></div>
+            {% endif %}
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1">
+                        <li class="breadcrumb-item"><a href="{% url 'family_list' %}">Семьи</a></li>
+                        <li class="breadcrumb-item active">{{ family.name }}</li>
+                    </ol>
+                </nav>
+                <h1 class="mb-0">{{ family.name }}</h1>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            {% if is_admin %}
+            <a href="{% url 'family_settings' family.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear me-1"></i>Настройки</a>
+            {% endif %}
+            <a href="{% url 'family_list' %}" class="btn btn-outline-secondary btn-sm">← К списку семей</a>
+        </div>
+    </div>
+
+    <!-- Участники -->
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0">Участники</h5>
+            {% if can_invite %}
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btnCopyInviteLink" data-url="{% url 'family_get_invite_link' family.id %}">
+                    <i class="bi bi-link-45deg me-1"></i>Скопировать ссылку приглашения
+                </button>
+                <form method="post" action="{% url 'family_invite' family.id %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="email" name="email" class="form-control form-control-sm" placeholder="Email для приглашения" style="max-width: 220px;">
+                    <button type="submit" class="btn btn-primary btn-sm">Пригласить</button>
+                </form>
+            </div>
+            {% else %}
+            <small class="text-muted">Приглашать могут только создатель/админ или участники с правом приглашения (настройки семьи).</small>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+                {% for m, m_avatar_url in members_with_avatars %}
+                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        {% if m_avatar_url %}
+                        <img src="{{ m_avatar_url }}" alt="" class="rounded-circle" style="width:36px;height:36px;object-fit:cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-person text-muted"></i></div>
+                        {% endif %}
+                        <div>
+                            <span class="fw-medium">{{ m.display_name|default:m.user.username }}</span>
+                            <span class="badge bg-secondary ms-1">{{ m.get_role_display }}</span>
+                            {% if is_admin or m.user == request.user %}
+                            <form method="post" action="{% url 'family_member_display_name' family.id m.id %}" class="d-inline ms-2 member-display-name-form">
+                                {% csrf_token %}
+                                <input type="text" name="display_name" class="form-control form-control-sm d-inline-block" placeholder="Имя в семье" style="width:140px;" value="{{ m.display_name|default:'' }}">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">OK</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if is_creator and m.role != 'creator' %}
+                        <form method="post" action="{% url 'family_remove_member' family.id %}" class="d-inline" onsubmit="return confirm('Удалить участника из семьи?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="member_id" value="{{ m.id }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Удалить из семьи"><i class="bi bi-person-x"></i></button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% if pending_emails %}
+            <p class="text-muted small mt-3 mb-0">Ожидают приглашения: {{ pending_emails }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Семейные цели -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Семейные цели</h5>
+            {% if can_create_goal %}
+            <a href="{% url 'family_goal_create' family.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>Новая цель
+            </a>
+            {% else %}
+            <small class="text-muted">Создавать цели могут только создатель/админ (настройки семьи).</small>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if family_goals %}
+            <div class="goals-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;">
+                {% for goal, goal_contribs in family_goals_with_contributions %}
+                <div class="card h-100 goal-flip-wrapper" id="goal-flip-{{ goal.id }}">
+                    <div class="goal-flip-inner">
+                        <div class="goal-flip-front card-body">
+                            <div class="goal-card-header">
+                                <button type="button" class="goal-flip-btn" onclick="document.getElementById('goal-flip-{{ goal.id }}').classList.toggle('flipped')" title="Подробное описание и когда пополнять"><i class="bi bi-info-lg"></i></button>
+                                <div class="goal-card-title-wrap">
+                                    <h5 class="card-title mb-1">{{ goal.name }}</h5>
+                                    <span class="badge {% if goal.status == 'active' %}bg-success{% elif goal.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                        {{ goal.get_status_display }}
+                                    </span>
+                                </div>
+                                <div class="goal-card-actions">
+                                    <a href="{% url 'edit_goal' goal.id %}" class="btn btn-outline-primary btn-sm" title="Редактировать"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'delete_goal' goal.id %}" class="btn btn-outline-danger btn-sm" title="Удалить"><i class="bi bi-trash"></i></a>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <small class="text-muted">Прогресс</small>
+                                    <small>{{ goal.progress_percentage|floatformat:1 }}%</small>
+                                </div>
+                                <div class="progress" style="height:8px;border-radius:4px;background:var(--border-color);">
+                                    <div class="progress-bar goal-progress-bar-animate" data-percent="{{ goal.progress_percentage }}" style="width:0%;background:var(--primary);"></div>
+                                </div>
+                            </div>
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Цель</small>
+                                    <strong>{{ goal.target_amount|intcomma }} ₽</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Срок</small>
+                                    <strong>{{ goal.deadline|date:"d.m.Y" }}</strong>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Накоплено: <strong>{{ goal.current_amount|intcomma }} ₽</strong></small>
+                            </div>
+                            <form method="post" action="{% url 'add_money_to_goal' goal.id %}" class="family-goal-form mt-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add">
+                                <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
+                                    <input type="number" name="amount" class="form-control" placeholder="Сумма" required min="1" step="1" style="max-width:120px;">
+                                    <button type="submit" class="goal-flip-btn family-goal-btn-add" title="Добавить"><i class="bi bi-plus-circle-fill text-success"></i></button>
+                                    <button type="submit" class="goal-flip-btn family-goal-btn-subtract" title="Снять с цели"><i class="bi bi-dash-circle-fill text-secondary"></i></button>
+                                </div>
+                                <small class="text-muted d-block mt-1">Только целые числа (например: 1000)</small>
+                            </form>
+                        </div>
+                        <div class="goal-flip-back card-body position-relative">
+                            <button type="button" class="goal-flip-btn position-absolute top-0 end-0" onclick="document.getElementById('goal-flip-{{ goal.id }}').classList.toggle('flipped')" title="Назад"><i class="bi bi-x-lg"></i></button>
+                            <div class="flip-back-title mt-1">Подробное описание</div>
+                            <div class="flip-back-desc">{{ goal.description|default:"Описание не указано." }}</div>
+                            <div class="flip-back-title">Когда нужно пополнять</div>
+                            <span class="flip-back-schedule">{{ goal.get_replenishment_display_short }}</span>
+                            <div class="flip-back-title mt-3">Пополнения по участникам</div>
+                            <div class="flip-back-contributions">
+                                {% for display_name, total in goal_contribs %}
+                                    <div class="d-flex justify-content-between align-items-center py-1 px-2 rounded mb-1" style="background: rgba(255,255,255,0.5);">
+                                        <span class="fw-medium">{{ display_name }}</span>
+                                        <strong>{{ total|floatformat:0|intcomma }} ₽</strong>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted small mb-0">Пока нет пополнений</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">Нет семейных целей. Создайте цель, чтобы вместе копить.</p>
+            {% if can_create_goal %}
+            <a href="{% url 'family_goal_create' family.id %}" class="btn btn-primary btn-sm mt-2">Создать цель</a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-bar-chart-line me-1"></i>Пополнения по месяцам</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Пополнения по месяцам — отдельно по каждой цели.</p>
+            {% if chart_available_months %}
+            <div class="chart-period-filter mb-4">
+                <form method="get" action="{% url 'family_detail' family.id %}" class="chart-period-form">
+                    <span class="chart-period-label"><i class="bi bi-calendar3 me-1"></i>Период</span>
+                    <select name="month_from" id="id_month_from" class="form-select chart-period-select" title="Начало периода">
+                        <option value="">Весь период</option>
+                        {% for val, label in chart_available_months %}
+                        <option value="{{ val }}" {% if chart_month_from == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="chart-period-sep">—</span>
+                    <select name="month_to" id="id_month_to" class="form-select chart-period-select" title="Конец периода">
+                        <option value="">Весь период</option>
+                        {% for val, label in chart_available_months %}
+                        <option value="{{ val }}" {% if chart_month_to == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary chart-period-btn"><i class="bi bi-funnel me-1"></i>Показать</button>
+                </form>
+            </div>
+            {% endif %}
+            <div class="family-chart-wrap" style="position:relative;height:300px;">
+                <canvas id="familyGoalsChart"></canvas>
+            </div>
+            <div class="mt-2">
+                <a href="{% url 'family_admin_chart' family.id %}{% if chart_month_from or chart_month_to %}?{% if chart_month_from %}month_from={{ chart_month_from }}{% endif %}{% if chart_month_from and chart_month_to %}&amp;{% endif %}{% if chart_month_to %}month_to={{ chart_month_to }}{% endif %}{% endif %}" class="btn btn-outline-primary btn-sm">Подробный график</a>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+            <script>
+            (function() {
+                var labels = {{ chart_labels_json|safe }};
+                var datasets = {{ chart_datasets_json|safe }};
+                if (typeof labels === 'string') labels = JSON.parse(labels);
+                if (typeof datasets === 'string') datasets = JSON.parse(datasets);
+                var ctx = document.getElementById('familyGoalsChart');
+                if (!ctx) return;
+                var hasData = labels && labels.length > 0 && datasets && datasets.length > 0;
+                if (!hasData) { labels = ['Нет данных']; datasets = [{ label: '—', data: [0], backgroundColor: 'rgba(200,200,200,0.6)', borderColor: '#94a3b8', borderWidth: 1 }]; }
+                datasets.forEach(function(d) { d.borderRadius = 4; d.borderSkipped = false; });
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: labels, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: { padding: { top: 10, right: 15, bottom: 5, left: 10 } },
+                        plugins: {
+                            legend: { position: 'top', labels: { font: { size: 11 }, padding: 12 } },
+                            tooltip: {
+                                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                                titleFont: { size: 12 },
+                                bodyFont: { size: 12 },
+                                padding: 10,
+                                callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ru-RU') + ' ₽'; } }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } },
+                            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, callback: function(v) { return v.toLocaleString('ru-RU') + ' ₽'; } } }
+                        }
+                    }
+                });
+            })();
+            </script>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-1"></i>История пополнений</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if contributions_history %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Дата и время</th>
+                            <th>Пользователь</th>
+                            <th>Цель</th>
+                            <th>Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in contributions_history %}
+                        <tr>
+                            <td>{{ c.contributed_at|date:"d.m.Y H:i" }}</td>
+                            <td>{{ c.user.username|default:"—" }}{% if c.user.get_full_name %} ({{ c.user.get_full_name }}){% endif %}</td>
+                            <td>{{ c.goal.name }}</td>
+                            <td><strong>+{{ c.amount|floatformat:0|intcomma }} ₽</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small mb-0 p-3 pt-0">Показаны последние 100 записей.</p>
+            {% else %}
+            <p class="text-muted mb-0 p-3">Пополнений пока не было. Добавьте сумму в любую семейную цель.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var bars = document.querySelectorAll('.goal-progress-bar-animate[data-percent]');
+    bars.forEach(function(bar) {
+        var target = parseFloat(bar.getAttribute('data-percent')) || 0;
+        bar.style.width = '0%';
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                bar.style.width = Math.min(100, target) + '%';
+            });
+        });
+    });
+})();
+document.querySelectorAll('form[action*="add-money"]').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        var amountInput = this.querySelector('[name="amount"]');
+        var amountValue = (amountInput ? amountInput.value : '').trim();
+        if (!amountValue) { e.preventDefault(); alert('Введите сумму'); if (amountInput) amountInput.focus(); return false; }
+        if (/[.,]/.test(amountValue)) { e.preventDefault(); alert('Введите целое число без копеек (например: 1000)'); if (amountInput) amountInput.focus(); return false; }
+        amountValue = amountValue.replace(/\s/g, '').replace(/[^\d]/g, '');
+        var num = parseInt(amountValue, 10);
+        if (isNaN(num) || num <= 0) { e.preventDefault(); alert('Введите корректную сумму'); if (amountInput) amountInput.focus(); return false; }
+        if (amountInput) amountInput.value = String(num);
+    });
+});
+document.querySelectorAll('.family-goal-btn-subtract').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var form = this.closest('form');
+        if (form) {
+            var hid = form.querySelector('input[name="action"]');
+            if (hid) hid.value = 'subtract';
+        }
+    });
+});
+document.querySelectorAll('.family-goal-btn-add').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var form = this.closest('form');
+        if (form) {
+            var hid = form.querySelector('input[name="action"]');
+            if (hid) hid.value = 'add';
+        }
+    });
+});
+var btnCopy = document.getElementById('btnCopyInviteLink');
+if (btnCopy) {
+    btnCopy.addEventListener('click', function() {
+        var url = this.getAttribute('data-url');
+        if (!url) return;
+        var csrf = document.querySelector('[name=csrfmiddlewaretoken]') && document.querySelector('[name=csrfmiddlewaretoken]').value;
+        var fd = new FormData();
+        fd.append('csrfmiddlewaretoken', csrf || '');
+        fetch(url, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.link) {
+                    navigator.clipboard.writeText(data.link).then(function() {
+                        btnCopy.innerHTML = '<i class="bi bi-check me-1"></i>Ссылка скопирована';
+                        setTimeout(function() { btnCopy.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Скопировать ссылку приглашения'; }, 2000);
+                    });
+                } else {
+                    alert(data.error || 'Не удалось получить ссылку');
+                }
+            })
+            .catch(function() { alert('Ошибка сети'); });
+    });
+}
+</script>
+{% endblock %}

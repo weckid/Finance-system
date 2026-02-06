@@ -1,0 +1,6 @@
+Django>=4.0
+python-dotenv>=1.0
+Pillow>=9.0
+pytesseract>=0.3.10
+pyzbar>=0.1.9
+openpyxl>=3.0

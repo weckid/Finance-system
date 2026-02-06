@@ -1,0 +1,1112 @@
+<!-- templates/finance/dashboard.html -->
+{% extends 'finance/base.html' %}
+{% load humanize %}
+
+{% block title %}Панель управления - Умные финансы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .dashboard-tab {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        white-space: nowrap;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .dashboard-tab:hover {
+        color: var(--primary);
+        background: rgba(67, 97, 238, 0.05);
+    }
+
+    .dashboard-tab.active {
+        color: var(--primary);
+        background: rgba(67, 97, 238, 0.1);
+    }
+
+    .dashboard-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .dashboard-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Статистика */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+
+    /* Цели — карточки */
+    .goals-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .goal-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--bg-card) 0%, #fafbff 100%);
+    }
+
+    .goal-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .goal-card .card {
+        border: none;
+        box-shadow: none;
+    }
+
+    .goal-progress {
+        height: 10px;
+        border-radius: 5px;
+        background: var(--border-color);
+        overflow: hidden;
+    }
+
+    .goal-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), #5b7cff);
+        transition: width 0.6s ease-out;
+        min-width: 0;
+    }
+
+    .goal-actions-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        background: var(--bg-body);
+        padding: 0.75rem;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+    }
+
+    .goal-actions-row .form-control {
+        max-width: 110px;
+        font-weight: 500;
+    }
+
+    .goal-actions-row .btn-success { min-width: 2.5rem; }
+    .goal-actions-row .btn-outline-secondary { min-width: 2.5rem; }
+
+    /* Формы */
+    .form-section {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Категории */
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .category-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background: white;
+        transition: all 0.2s ease;
+    }
+
+    .category-item:hover {
+        border-color: var(--primary);
+        background: rgba(67, 97, 238, 0.02);
+    }
+
+    .category-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 1rem;
+    }
+
+    /* Чеки */
+    .upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 3rem 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.02), rgba(67, 97, 238, 0.01));
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 2rem;
+    }
+
+    .upload-area:hover {
+        border-color: var(--primary);
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(67, 97, 238, 0.02));
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        color: var(--primary);
+        margin-bottom: 1rem;
+    }
+
+    /* Транзакции */
+    .transactions-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .transactions-table th,
+    .transactions-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        text-align: left;
+    }
+
+    .transactions-table th {
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Быстрые действия */
+    .quick-actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .quick-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .quick-action-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Заголовок и вкладки -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-2">Добро пожаловать, {{ user.username }}!</h1>
+            <p class="text-muted mb-0">{% now "d E Y" %}</p>
+        </div>
+    </div>
+
+    <!-- Вкладки -->
+    <div class="dashboard-tabs" id="dashboardTabs">
+        <button type="button" class="dashboard-tab active" data-tab="overview" onclick="showTab('overview')">Обзор</button>
+        <button type="button" class="dashboard-tab" data-tab="goals" onclick="showTab('goals')">Цели</button>
+        <button type="button" class="dashboard-tab" data-tab="transactions" onclick="showTab('transactions')">Транзакции</button>
+        <button type="button" class="dashboard-tab" data-tab="categories" onclick="showTab('categories')">Категории</button>
+        <button type="button" class="dashboard-tab" data-tab="upload" onclick="showTab('upload')">Загрузка чека</button>
+    </div>
+
+    <!-- Контент вкладок -->
+
+    <!-- Вкладка Обзор -->
+    <div class="dashboard-content active" id="overviewContent">
+        <!-- Статистика -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value text-primary">{{ total_goals }}</div>
+                <div class="stat-label">Целей</div>
+                <small class="text-muted">Активных: {{ active_goals }}</small>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-value text-danger">{{ total_expenses|floatformat:0 }} ₽</div>
+                <div class="stat-label">Расходы</div>
+                <small class="text-muted">Всего транзакций</small>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-value text-success">{{ total_current_amount|floatformat:0 }} ₽</div>
+                <div class="stat-label">Накоплено</div>
+                <small class="text-muted">По всем целям</small>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-value text-info">{{ category_count }}</div>
+                <div class="stat-label">Категорий</div>
+                <small class="text-muted">Для сортировки</small>
+            </div>
+        </div>
+
+        <!-- Последние цели -->
+        {% if goals %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Мои цели</h5>
+                <button class="btn btn-sm btn-primary" onclick="showTab('goals')">
+                    Все цели
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="goals-grid">
+                    {% for goal in goals|slice:":4" %}
+                    <div class="goal-card" onclick="showGoalDetail('{{ goal.id }}')" style="cursor: pointer;">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h5 class="card-title mb-1">{{ goal.name }}</h5>
+                                        <span class="badge {% if goal.status == 'active' %}bg-success{% elif goal.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ goal.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <small class="text-muted">Прогресс</small>
+                                        <small>{{ goal.progress_percentage|floatformat:1 }}%</small>
+                                    </div>
+                                    <div class="goal-progress">
+                                        <div class="goal-progress-bar" data-percent="{{ goal.progress_percentage }}" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">Цель</small>
+                                        <strong>{{ goal.target_amount|floatformat:0 }} ₽</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">Срок</small>
+                                        <strong>{{ goal.deadline|date:"d.m.Y" }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+<!-- Вкладка Цели -->
+<div class="dashboard-content" id="goalsContent">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Финансовые цели</h2>
+        <button class="btn btn-primary" onclick="showCreateGoalForm()">
+            <i class="bi bi-plus-circle me-2"></i>Новая цель
+        </button>
+    </div>
+
+    <!-- Форма создания цели -->
+    <div class="card mb-4" id="createGoalForm" style="display: none;">
+        <div class="card-header">
+            <h5 class="mb-0">Создание цели</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'create_goal' %}" id="goalForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Чья цель? *</label>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <label class="form-check">
+                            <input type="radio" name="goal_scope" value="personal" class="form-check-input" checked id="goalScopePersonal">
+                            <span class="form-check-label">Личная</span>
+                        </label>
+                        <label class="form-check">
+                            <input type="radio" name="goal_scope" value="family" class="form-check-input" id="goalScopeFamily">
+                            <span class="form-check-label">Семейная</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3" id="goalFamilySelectWrap" style="display: none;">
+                    <label class="form-label">Семья *</label>
+                    <select name="family_id" id="goalFamilySelect" class="form-select">
+                        <option value="">— Выберите семью —</option>
+                        {% for f in user_families %}
+                        <option value="{{ f.id }}">{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Название цели *</label>
+                        <input type="text" name="name" class="form-control" placeholder="Например: Новая машина" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Тип цели *</label>
+                        <select name="goal_type" class="form-select" required>
+                            <option value="savings">Накопления</option>
+                            <option value="debt">Погашение долга</option>
+                            <option value="investment">Инвестиции</option>
+                            <option value="purchase">Крупная покупка</option>
+                            <option value="travel">Путешествие</option>
+                            <option value="education">Образование</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Целевая сумма (₽) *</label>
+                        <input type="number" name="target_amount" class="form-control" placeholder="100000" step="0.01" min="1" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Срок выполнения *</label>
+                        <input type="date" name="deadline" class="form-control" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Описание</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="Опишите вашу цель..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Обязательное пополнение</label>
+                    <select name="replenishment_frequency" class="form-select">
+                        <option value="">Без обязательного графика</option>
+                        <option value="daily">Раз в день</option>
+                        <option value="every_2_days">Раз в 2 дня</option>
+                        <option value="every_3_days">Раз в 3 дня</option>
+                        <option value="weekly">Раз в неделю</option>
+                        <option value="monthly">Раз в месяц</option>
+                    </select>
+                    <small class="text-muted">Когда нужно напоминать о пополнении цели</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Создать цель</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="hideCreateGoalForm()">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    (function() {
+        var personal = document.getElementById('goalScopePersonal');
+        var family = document.getElementById('goalScopeFamily');
+        var wrap = document.getElementById('goalFamilySelectWrap');
+        var sel = document.getElementById('goalFamilySelect');
+        function toggle() {
+            if (wrap) wrap.style.display = family && family.checked ? 'block' : 'none';
+            if (sel) sel.required = family && family.checked;
+        }
+        if (personal) personal.addEventListener('change', toggle);
+        if (family) family.addEventListener('change', toggle);
+        toggle();
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('tab') === 'goals' && params.get('family_id')) {
+            var fid = params.get('family_id');
+            if (family) family.checked = true;
+            toggle();
+            if (sel && fid) sel.value = fid;
+        }
+    })();
+    </script>
+
+    <!-- Список целей -->
+    {% if goals %}
+    <div class="goals-grid">
+        {% for goal in goals %}
+        <div class="goal-card">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">{{ goal.name }}</h5>
+                            <span class="badge {% if goal.status == 'active' %}bg-success{% elif goal.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {{ goal.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <p class="card-text text-muted mb-4">{{ goal.description|default:"Без описания"|truncatechars:100 }}</p>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small class="text-muted">Прогресс</small>
+                            <small>{{ goal.progress_percentage|floatformat:1 }}%</small>
+                        </div>
+                        <div class="goal-progress">
+                            <div class="goal-progress-bar" data-percent="{{ goal.progress_percentage }}" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Цель</small>
+                            <strong>{{ goal.target_amount|intcomma }} ₽</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Срок</small>
+                            <strong>{{ goal.deadline|date:"d.m.Y" }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Накоплено: <strong>{{ goal.current_amount|intcomma }} ₽</strong></small>
+                    </div>
+
+                    <!-- Форма добавления/вычитания денег -->
+                    <form method="post" action="{% url 'add_money_to_goal' goal.id %}" class="goal-amount-form mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+                        <div class="goal-actions-row d-flex gap-2 align-items-center flex-wrap">
+                            <input type="number" name="amount" class="form-control" placeholder="Сумма" required min="1" step="1" style="max-width: 120px;">
+                            <button type="submit" class="btn btn-success btn-sm goal-btn-add" title="Добавить"><i class="bi bi-plus-circle-fill"></i></button>
+                            <button type="submit" class="btn btn-outline-secondary btn-sm goal-btn-subtract" title="Снять"><i class="bi bi-dash-circle-fill"></i></button>
+                        </div>
+                        <small class="text-muted d-block mt-1">Только целые числа (например: 1000)</small>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-bullseye text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+            <h4 class="mt-3 mb-2">Нет целей</h4>
+            <p class="text-muted mb-4">Создайте свою первую финансовую цель</p>
+            <button class="btn btn-primary" onclick="showCreateGoalForm()">
+                Создать цель
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+    <!-- Вкладка Транзакции -->
+    <div class="dashboard-content" id="transactionsContent">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2>Транзакции</h2>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#addTransactionForm" aria-expanded="false">
+                    <i class="bi bi-plus-circle me-1"></i>Добавить
+                </button>
+                <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="collapse" data-bs-target="#importExcelForm" aria-expanded="false">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Импорт Excel
+                </button>
+                <a href="{% url 'download_transactions_example' %}" class="btn btn-outline-secondary btn-sm" title="Скачать пример">
+                    <i class="bi bi-download me-1"></i>Пример Excel
+                </a>
+            </div>
+        </div>
+
+        <!-- Форма добавления транзакции -->
+        <div class="collapse mb-4" id="addTransactionForm">
+            <div class="card">
+                <div class="card-header"><h6 class="mb-0">Добавить транзакцию</h6></div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'add_transaction' %}">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label class="form-label">Дата</label>
+                                <input type="date" name="date" class="form-control" value="{% now 'Y-m-d' %}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Сумма (₽) *</label>
+                                <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required placeholder="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Тип</label>
+                                <select name="type" class="form-select">
+                                    <option value="expense">Расход</option>
+                                    <option value="income">Доход</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Категория</label>
+                                <select name="category" class="form-select">
+                                    <option value="">— Не указана —</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Счёт</label>
+                                <select name="account" class="form-select">
+                                    {% for acc in user_accounts %}
+                                    <option value="{{ acc.id }}">{{ acc.name }}</option>
+                                    {% empty %}
+                                    <option value="">Основной</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Описание</label>
+                                <input type="text" name="description" class="form-control" placeholder="Описание операции">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label">Магазин/Продавец</label>
+                                <input type="text" name="merchant" class="form-control" placeholder="Название магазина">
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">Добавить</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Форма импорта Excel -->
+        <div class="collapse mb-4" id="importExcelForm">
+            <div class="card">
+                <div class="card-header"><h6 class="mb-0">Импорт транзакций из Excel</h6></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Колонки: Дата | Сумма | Тип (expense/income) | Описание | Категория | Магазин. Первая строка — заголовки.</p>
+                    <form method="post" action="{% url 'import_transactions_excel' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Файл Excel (.xlsx)</label>
+                                <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Счёт</label>
+                                <select name="account" class="form-select">
+                                    {% for acc in user_accounts %}
+                                    <option value="{{ acc.id }}">{{ acc.name }}</option>
+                                    {% empty %}
+                                    <option value="">Основной</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Импорт</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика расходов -->
+        {% if category_stats %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Статистика расходов</h5>
+            </div>
+            <div class="card-body">
+                {% for cat_name, stat in category_stats.items %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <div>
+                            <span style="display: inline-block; width: 12px; height: 12px; background-color: {{ stat.color|default:'#007bff' }}; border-radius: 2px; margin-right: 8px;"></span>
+                            <span>{{ cat_name }}</span>
+                        </div>
+                        <div>
+                            <strong>{{ stat.amount|floatformat:0 }} ₽</strong>
+                            <small class="text-muted ms-2">{{ stat.percentage|floatformat:1 }}%</small>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar" style="width: {{ stat.percentage }}%; background-color: {{ stat.color|default:'#007bff' }}"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Список транзакций -->
+        {% if transactions %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Категория</th>
+                                <th>Сумма</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.date|date:"d.m.Y" }}</td>
+                                <td>
+                                    {% if transaction.category %}
+                                    <span class="badge" style="background-color: {{ transaction.category.color }}; color: white;">
+                                        {{ transaction.category.name }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Не указана</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ transaction.amount }} ₽</strong></td>
+                                <td>{{ transaction.description|default:"—"|truncatechars:30 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-receipt text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+                <h4 class="mt-3 mb-2">Нет транзакций</h4>
+                <p class="text-muted mb-4">Загрузите первый чек</p>
+                <button class="btn btn-success" onclick="showTab('upload')">
+                    Загрузить чек
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Вкладка Категории -->
+    <div class="dashboard-content" id="categoriesContent">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Категории</h2>
+            <button class="btn btn-primary" onclick="showCreateCategoryForm()">
+                <i class="bi bi-plus-circle me-2"></i>Новая категория
+            </button>
+        </div>
+
+        <!-- Форма создания категории -->
+<div class="card mb-4" id="createCategoryForm" style="display: none;">
+    <div class="card-header">
+        <h5 class="mb-0">Новая категория</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'create_category' %}" id="categoryForm">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Название категории *</label>
+                <input type="text" name="name" class="form-control" placeholder="Например: Продукты" required>
+                <small class="text-muted">Система автоматически подберет цвет и иконку</small>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Создать</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="hideCreateCategoryForm()">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+        <!-- Список категорий -->
+        <div class="categories-grid">
+            {% for category in categories %}
+            <div class="category-item d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center flex-grow-1">
+                    <div class="category-color" style="background-color: {{ category.color }};"></div>
+                    <div>
+                        <h6 class="mb-1">{{ category.name }}</h6>
+                        <small class="text-muted">{{ category.get_type_display }}</small>
+                        {% if category.is_system %}
+                        <span class="badge bg-info ms-2">Системная</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if not category.is_system and category.owner == request.user %}
+                <a href="{% url 'delete_category' category.id %}" class="btn btn-outline-danger btn-sm" title="Удалить"><i class="bi bi-trash"></i></a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-tags text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <h4 class="mt-3 mb-2">Нет категорий</h4>
+                        <p class="text-muted mb-4">Создайте первую категорию</p>
+                        <button class="btn btn-primary" onclick="showCreateCategoryForm()">
+                            Создать категорию
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Вкладка Загрузка чека -->
+    <div class="dashboard-content" id="uploadContent">
+        <div class="mb-4">
+            <h2>Загрузка чека</h2>
+        </div>
+
+        <!-- Форма загрузки -->
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'upload_receipt' %}" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label for="receiptImage" class="upload-area d-block mb-0" style="cursor:pointer;">
+                            <div class="upload-icon">
+                                <i class="bi bi-cloud-upload"></i>
+                            </div>
+                            <h5>Нажмите для загрузки чека</h5>
+                            <p class="text-muted mb-0">или перетащите файл сюда</p>
+                            <input type="file" name="receipt_image" id="receiptImage" accept="image/*" class="d-none" onchange="window.previewImage(this)">
+                        </label>
+                        <div id="imagePreview" class="mt-3" style="display: none;">
+                            <img id="previewImage" src="#" alt="Предпросмотр" class="img-thumbnail" style="max-height: 200px;">
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-primary btn-sm" id="btnScanReceipt" onclick="window.runReceiptScan()">
+                                    <i class="bi bi-upc-scan me-1"></i>Сканировать чек
+                                </button>
+                                <span class="text-muted small ms-2">Сумма, магазин и категория заполнятся автоматически</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="date" id="receiptDate" value="">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Категория *</label>
+                            <select name="category" id="receiptCategory" class="form-select" required>
+                                <option value="">Выберите категорию</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Сумма (₽) *</label>
+                            <input type="number" name="amount" id="receiptAmount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Магазин</label>
+                            <input type="text" name="description" id="receiptDescription" class="form-control" placeholder="Название магазина">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-upload me-2"></i>Загрузить чек
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function() {
+    // Переключение вкладок — глобально для onclick
+    window.showTab = function(tabName) {
+        var contentEl = document.getElementById(tabName + 'Content');
+        if (!contentEl) return;
+
+        document.querySelectorAll('.dashboard-content').forEach(function(content) {
+            content.classList.remove('active');
+        });
+        contentEl.classList.add('active');
+
+        document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
+            tab.classList.remove('active');
+            if (tab.getAttribute('data-tab') === tabName) {
+                tab.classList.add('active');
+            }
+        });
+
+        var url = new URL(window.location.href);
+        url.searchParams.set('tab', tabName);
+        window.history.replaceState({}, '', url);
+    };
+
+    function init() {
+        // Анимация полосок прогресса целей при загрузке
+        document.querySelectorAll('.goal-progress-bar[data-percent]').forEach(function(bar) {
+            var target = parseFloat(bar.getAttribute('data-percent')) || 0;
+            bar.style.width = '0%';
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    bar.style.width = Math.min(100, target) + '%';
+                });
+            });
+        });
+
+        // Обработчики для табов
+        document.querySelectorAll('.dashboard-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                window.showTab(this.getAttribute('data-tab'));
+            });
+        });
+
+        // Кнопки «Добавить» / «Снять» — задаём action перед отправкой
+        document.querySelectorAll('.goal-btn-subtract').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var form = this.closest('form');
+                if (form) {
+                    var hid = form.querySelector('input[name="action"]');
+                    if (hid) hid.value = 'subtract';
+                }
+            });
+        });
+        document.querySelectorAll('.goal-btn-add').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var form = this.closest('form');
+                if (form) {
+                    var hid = form.querySelector('input[name="action"]');
+                    if (hid) hid.value = 'add';
+                }
+            });
+        });
+
+        // Валидация форм добавления/снятия денег с целей (только целые числа)
+        document.querySelectorAll('form[action*="add-money"]').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                var amountInput = this.querySelector('[name="amount"]');
+                var amountValue = (amountInput ? amountInput.value : '').trim();
+                if (!amountValue) {
+                    e.preventDefault();
+                    alert('Введите сумму');
+                    if (amountInput) amountInput.focus();
+                    return false;
+                }
+                if (/[.,]/.test(amountValue)) {
+                    e.preventDefault();
+                    alert('Введите целое число без копеек (например: 1000)');
+                    if (amountInput) amountInput.focus();
+                    return false;
+                }
+                amountValue = amountValue.replace(/\s/g, '').replace(/[^\d]/g, '');
+                var num = parseInt(amountValue, 10);
+                if (isNaN(num) || num <= 0) {
+                    e.preventDefault();
+                    alert('Введите корректную сумму');
+                    if (amountInput) amountInput.focus();
+                    return false;
+                }
+                if (amountInput) amountInput.value = String(num);
+            });
+        });
+    }
+
+    window.showCreateGoalForm = function() {
+        window.showTab('goals');
+        var el = document.getElementById('createGoalForm');
+        if (el) { el.style.display = 'block'; el.scrollIntoView({ behavior: 'smooth' }); }
+    };
+    window.hideCreateGoalForm = function() {
+        var el = document.getElementById('createGoalForm');
+        if (el) el.style.display = 'none';
+    };
+    window.showCreateCategoryForm = function() {
+        window.showTab('categories');
+        var el = document.getElementById('createCategoryForm');
+        if (el) el.style.display = 'block';
+    };
+    window.hideCreateCategoryForm = function() {
+        var el = document.getElementById('createCategoryForm');
+        if (el) el.style.display = 'none';
+    };
+
+    window.previewImage = function(input) {
+        if (!input || !input.files || !input.files[0]) return;
+        var reader = new FileReader();
+        var preview = document.getElementById('previewImage');
+        var previewContainer = document.getElementById('imagePreview');
+        reader.onload = function(e) {
+            if (preview) preview.src = e.target.result;
+            if (previewContainer) previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    };
+
+    function parseQR(text) {
+        var r = { amount: null, date: null, merchant: '' };
+        var p = {};
+        (text || '').replace(/(?:^|[?&;])([^=]+)=([^&;\s]*)/g, function(_, k, v) {
+            try { p[k.toLowerCase()] = decodeURIComponent((v || '').trim()); } catch(e) { p[k.toLowerCase()] = (v || '').trim(); }
+            return _;
+        });
+        if (p.s) {
+            var s = parseFloat(String(p.s).replace(',', '.').replace(/\s/g, ''));
+            if (!isNaN(s) && s > 0 && s < 1e8) r.amount = Math.round(s * 100) / 100;
+        }
+        if (p.t) {
+            var m = String(p.t).match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+            if (m) r.date = m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00';
+        }
+        if (p.nn && p.nn.length > 3) r.merchant = p.nn;
+        else if (p.org && p.org.length > 3) r.merchant = p.org;
+        return r;
+    }
+
+    window.runReceiptScan = function() {
+        if (typeof Html5Qrcode === 'undefined') {
+            alert('Библиотека QR не загружена. Обновите страницу.');
+            return;
+        }
+        var input = document.getElementById('receiptImage');
+        if (!input || !input.files || !input.files[0]) { alert('Сначала загрузите фото чека'); return; }
+        var amountEl = document.getElementById('receiptAmount');
+        var descEl = document.getElementById('receiptDescription');
+        var catEl = document.getElementById('receiptCategory');
+        var dateEl = document.getElementById('receiptDate');
+        var btn = document.getElementById('btnScanReceipt');
+        var form = document.getElementById('uploadForm');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Сканирование...'; }
+
+        var qrReader = document.getElementById('qrReaderScan');
+        if (!qrReader) {
+            qrReader = document.createElement('div');
+            qrReader.id = 'qrReaderScan';
+            qrReader.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;';
+            document.body.appendChild(qrReader);
+        }
+
+        var html5Qr = new Html5Qrcode('qrReaderScan');
+        html5Qr.scanFile(input.files[0], false).then(function(qrText) {
+            var qr = parseQR(qrText);
+            if (qr.amount && amountEl) amountEl.value = qr.amount;
+            if (qr.date && dateEl) dateEl.value = qr.date;
+            if (qr.merchant && descEl) descEl.value = qr.merchant;
+        }).catch(function() { /* QR не найден — пробуем сервер */ }).finally(function() {
+            html5Qr.clear().catch(function(){});
+            if (!dateEl.value && dateEl) {
+                var now = new Date();
+                dateEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + 'T' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            }
+            var fd = new FormData();
+            fd.append('receipt_image', input.files[0]);
+            fd.append('csrfmiddlewaretoken', document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value);
+            fetch('{% url "scan_receipt" %}', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        if (data.amount != null && amountEl) amountEl.value = data.amount;
+                        if (data.merchant && descEl && !descEl.value) descEl.value = data.merchant;
+                        if (data.category_id && catEl) catEl.value = data.category_id;
+                        if (data.date && dateEl) dateEl.value = data.date;
+                        if (amountEl.value && form) form.submit();
+                        else if (!amountEl.value) alert('Не удалось извлечь сумму. Убедитесь, что на фото виден QR-код чека.');
+                    } else {
+                        if (!amountEl.value) alert(data.error || 'Ошибка сканирования');
+                        else if (form) form.submit();
+                    }
+                })
+                .catch(function() {
+                    if (amountEl.value && form) form.submit();
+                    else alert('Ошибка соединения. Проверьте подключение к интернету.');
+                })
+                .finally(function() {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-upc-scan me-1"></i>Сканировать чек'; }
+                });
+        });
+    };
+
+    var uploadArea = document.querySelector('.upload-area');
+    var receiptInput = document.getElementById('receiptImage');
+    if (uploadArea && receiptInput) {
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.borderColor = 'var(--primary)';
+            this.style.backgroundColor = 'rgba(67, 97, 238, 0.05)';
+        });
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.style.borderColor = 'var(--border-color)';
+            this.style.backgroundColor = '';
+        });
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (e.dataTransfer.files.length) {
+                receiptInput.files = e.dataTransfer.files;
+                window.previewImage(receiptInput);
+            }
+        });
+    }
+
+    function onReady() {
+        init();
+        var dateEl = document.getElementById('receiptDate');
+        if (dateEl && !dateEl.value) {
+            var now = new Date();
+            dateEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + 'T' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+        }
+        var tab = new URLSearchParams(window.location.search).get('tab');
+        if (tab && ['overview', 'goals', 'transactions', 'categories', 'upload'].indexOf(tab) >= 0) {
+            window.showTab(tab);
+            if (tab === 'goals' && new URLSearchParams(window.location.search).get('family_id')) {
+                setTimeout(function() { window.showCreateGoalForm(); }, 100);
+            }
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', onReady);
+    } else {
+        onReady();
+    }
+})();
+</script>
+{% endblock %}

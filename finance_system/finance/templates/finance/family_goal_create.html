@@ -1,0 +1,68 @@
+{% extends 'finance/base.html' %}
+{% block title %}Новая семейная цель — {{ family.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'family_list' %}">Семьи</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'family_detail' family.id %}">{{ family.name }}</a></li>
+                    <li class="breadcrumb-item active">Новая цель</li>
+                </ol>
+            </nav>
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Новая семейная цель</h4>
+                    <p class="text-muted small mb-0">Семья «{{ family.name }}»</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'family_goal_create' family.id %}">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Название цели *</label>
+                                <input type="text" name="name" class="form-control" placeholder="Например: Отпуск" required value="{{ form.name.value|default:'' }}">
+                                {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Тип цели *</label>
+                                <select name="goal_type" class="form-select" required>
+                                    <option value="savings">Накопления</option>
+                                    <option value="debt">Погашение долга</option>
+                                    <option value="investment">Инвестиции</option>
+                                    <option value="purchase">Крупная покупка</option>
+                                    <option value="travel">Путешествие</option>
+                                    <option value="education">Образование</option>
+                                    <option value="other">Другое</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Целевая сумма (₽) *</label>
+                                <input type="number" name="target_amount" class="form-control" step="0.01" min="1" required placeholder="100000" value="{{ form.target_amount.value|default:'' }}">
+                                {% if form.target_amount.errors %}<div class="text-danger small">{{ form.target_amount.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Срок выполнения *</label>
+                                <input type="date" name="deadline" class="form-control" required value="{{ form.deadline.value|default:'' }}">
+                                {% if form.deadline.errors %}<div class="text-danger small">{{ form.deadline.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Описание</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Опишите цель...">{{ form.description.value|default:'' }}</textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Создать цель</button>
+                            <a href="{% url 'family_detail' family.id %}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

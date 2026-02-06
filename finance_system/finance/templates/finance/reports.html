@@ -1,0 +1,131 @@
+{% extends 'finance/base.html' %}
+{% block title %}Отчёты и аналитика — FinanceIntellect{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 320px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0"><i class="bi bi-graph-up me-2"></i>Отчёты и аналитика</h1>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">← Панель</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Динамика расходов по месяцам</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="chartMonthly"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Структура расходов по категориям</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="chartCategories"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Сводка по категориям</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if category_summary %}
+                    <ul class="list-group list-group-flush">
+                        {% for item in category_summary %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><span class="d-inline-block rounded me-2" style="width: 12px; height: 12px; background-color: {{ item.color }};"></span>{{ item.name }}</span>
+                            <strong>{{ item.total|floatformat:2 }}</strong>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="card-body text-center text-muted py-4">
+                        Нет данных о расходах. Добавьте транзакции на панели управления.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ monthly_data|json_script:"monthlyData" }}
+{{ category_labels|json_script:"categoryLabels" }}
+{{ category_totals|json_script:"categoryTotals" }}
+{{ category_colors|json_script:"categoryColors" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const monthlyData = JSON.parse(document.getElementById('monthlyData').textContent || '[]');
+    const categoryLabels = JSON.parse(document.getElementById('categoryLabels').textContent || '[]');
+    const categoryTotals = JSON.parse(document.getElementById('categoryTotals').textContent || '[]');
+    const categoryColors = JSON.parse(document.getElementById('categoryColors').textContent || '[]');
+
+    if (monthlyData.length) {
+        new Chart(document.getElementById('chartMonthly'), {
+            type: 'bar',
+            data: {
+                labels: monthlyData.map(d => d.label),
+                datasets: [{
+                    label: 'Расходы (руб.)',
+                    data: monthlyData.map(d => d.total),
+                    backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                    borderColor: 'rgb(37, 99, 235)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    } else {
+        document.getElementById('chartMonthly').parentElement.innerHTML = '<p class="text-muted text-center py-4 mb-0">Нет данных за последние 12 месяцев.</p>';
+    }
+
+    if (categoryLabels.length && categoryTotals.length) {
+        new Chart(document.getElementById('chartCategories'), {
+            type: 'doughnut',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    data: categoryTotals,
+                    backgroundColor: categoryColors.length ? categoryColors : undefined,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+    } else {
+        document.getElementById('chartCategories').parentElement.innerHTML = '<p class="text-muted text-center py-4 mb-0">Нет данных по категориям.</p>';
+    }
+})();
+</script>
+{% endblock %}

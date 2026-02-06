@@ -1,0 +1,70 @@
+{% extends 'finance/base.html' %}
+{% block title %}Управление категориями — FinanceIntellect{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Панель</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}?tab=categories">Категории</a></li>
+                    <li class="breadcrumb-item active">Управление</li>
+                </ol>
+            </nav>
+            <h1 class="mb-0">Управление категориями</h1>
+        </div>
+        <a href="{% url 'dashboard' %}?tab=categories" class="btn btn-outline-secondary btn-sm">← Назад к категориям</a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Все категории (мои и системные)</h5>
+            <a href="{% url 'dashboard' %}?tab=categories" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus me-1"></i>Создать категорию
+            </a>
+        </div>
+        <div class="card-body p-0">
+            {% if user_categories or system_categories %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">Цвет</th>
+                        <th>Название</th>
+                        <th>Тип</th>
+                        <th style="width: 160px;" class="text-end">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in user_categories %}
+                    <tr>
+                        <td><span class="d-inline-block rounded" style="width: 20px; height: 20px; background-color: {{ cat.color }};"></span></td>
+                        <td>{{ cat.name }}</td>
+                        <td><span class="badge bg-secondary">Моя</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'category_edit' cat.id %}" class="btn btn-outline-primary btn-sm">Изменить</a>
+                            <a href="{% url 'category_delete' cat.id %}" class="btn btn-outline-danger btn-sm">Удалить</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% for cat in system_categories %}
+                    <tr>
+                        <td><span class="d-inline-block rounded" style="width: 20px; height: 20px; background-color: {{ cat.color }};"></span></td>
+                        <td>{{ cat.name }}</td>
+                        <td><span class="badge bg-info">Системная</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'category_edit' cat.id %}" class="btn btn-outline-primary btn-sm">Изменить</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="card-body text-center text-muted py-4">
+                Нет категорий. Запустите <code>python manage.py seed_categories</code> или создайте на вкладке «Категории».
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

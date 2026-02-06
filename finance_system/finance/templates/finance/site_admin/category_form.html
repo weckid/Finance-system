@@ -1,0 +1,25 @@
+{% extends 'finance/site_admin/base.html' %}
+{% block admin_title %}{{ form_title }}{% endblock %}
+{% block admin_heading %}{{ form_title }}{% endblock %}
+
+{% block admin_content %}
+<div class="card" style="max-width: 480px;">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Название категории *</label>
+                <input type="text" name="name" class="form-control" placeholder="Например: Еда" required maxlength="100">
+            </div>
+            <div class="mb-3">
+                <div class="form-check">
+                    <input type="checkbox" name="is_system" id="id_is_system" class="form-check-input">
+                    <label class="form-check-label" for="id_is_system">Системная категория (доступна всем)</label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Создать</button>
+            <a href="{% url 'admin_categories' %}" class="btn btn-outline-secondary">Отмена</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

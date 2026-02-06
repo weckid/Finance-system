@@ -1,0 +1,402 @@
+{% extends 'finance/base.html' %}
+
+{% block title %}Вход и регистрация - Умные финансы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-page {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+
+    .auth-card {
+        max-width: 400px;
+        width: 100%;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+    }
+
+    .auth-header {
+        padding: 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05));
+    }
+
+    .auth-logo {
+        width: 60px;
+        height: 60px;
+        background: var(--primary);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .auth-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .auth-tab {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        background: none;
+        border: none;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .auth-tab:hover {
+        color: var(--primary);
+    }
+
+    .auth-tab.active {
+        color: var(--primary);
+    }
+
+    .auth-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--primary);
+        border-radius: 3px 3px 0 0;
+    }
+
+    .auth-content {
+        padding: 2rem;
+    }
+
+    .auth-form {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .auth-form.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-footer {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .forgot-password {
+        display: block;
+        text-align: center;
+        margin-top: 1rem;
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 0.875rem;
+    }
+
+    .forgot-password:hover {
+        text-decoration: underline;
+    }
+
+    .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .checkbox-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0.25rem;
+        z-index: 2;
+    }
+
+    .password-input-wrapper {
+        position: relative;
+        display: block;
+    }
+
+    .password-input-wrapper .form-control {
+        padding-right: 2.75rem;
+    }
+
+    .form-error {
+        color: var(--danger);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .alert-in-card {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <!-- Заголовок -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+            <h3>Добро пожаловать</h3>
+            <p class="text-muted">Войдите в свой аккаунт или создайте новый</p>
+        </div>
+
+        <!-- Табы -->
+        <div class="auth-tabs">
+            <button class="auth-tab {% if not active_tab or active_tab == 'login' %}active{% endif %}" data-tab="login">Вход</button>
+            <button class="auth-tab {% if active_tab == 'register' %}active{% endif %}" data-tab="register">Регистрация</button>
+        </div>
+
+        <!-- Контент -->
+        <div class="auth-content" data-active-tab="{{ active_tab|default:'login' }}">
+            {% if messages %}
+            <div class="alert-in-card">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    <div class="d-flex align-items-center">
+                        {% if message.tags == 'success' %}
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif message.tags == 'error' %}
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        {% else %}
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Форма входа -->
+            <form method="post" action="{% url 'login' %}" class="auth-form {% if not active_tab or active_tab == 'login' %}active{% endif %}" id="loginForm">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="login">
+
+                {% if login_form.non_field_errors %}
+                <div class="alert alert-danger py-2">
+                    {% for err in login_form.non_field_errors %}{{ err }}{% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label for="loginEmail" class="form-label">Email или имя пользователя</label>
+                    <input type="text" name="username" id="loginEmail" class="form-control {% if login_form.username.errors %}is-invalid{% endif %}" placeholder="example@email.com" value="{{ login_form.username.value|default:'' }}" required>
+                    {% if login_form.username.errors %}<div class="form-error">{{ login_form.username.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword" class="form-label">Пароль</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password" id="loginPassword" class="form-control {% if login_form.password.errors %}is-invalid{% endif %}" placeholder="Введите пароль" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Показать пароль">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    {% if login_form.password.errors %}<div class="form-error">{{ login_form.password.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="remember-me">
+                        <input type="checkbox" name="remember_me" id="rememberMe" class="form-check-input">
+                        <label for="rememberMe" class="checkbox-label">Запомнить меня</label>
+                    </div>
+                    <button type="button" class="btn btn-link p-0" style="font-size: 0.875rem; color: var(--primary);" onclick="showPasswordReset()">
+                        Забыли пароль?
+                    </button>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Войти в аккаунт
+                </button>
+            </form>
+
+            <!-- Форма регистрации -->
+            <form method="post" action="{% url 'register' %}" class="auth-form {% if active_tab == 'register' %}active{% endif %}" id="registerForm">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="register">
+
+                {% if register_form.non_field_errors %}
+                <div class="alert alert-danger py-2">
+                    {% for err in register_form.non_field_errors %}{{ err }}{% endfor %}
+                </div>
+                {% endif %}
+                {% if register_form.phone.errors %}
+                <div class="alert alert-danger py-2">Телефон: {{ register_form.phone.errors.0 }}</div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label for="registerUsername" class="form-label">Имя пользователя</label>
+                    <input type="text" name="username" id="registerUsername" class="form-control {% if register_form.username.errors %}is-invalid{% endif %}" placeholder="Придумайте имя пользователя" value="{{ register_form.username.value|default:'' }}" required>
+                    {% if register_form.username.errors %}<div class="form-error">{{ register_form.username.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="registerEmail" class="form-label">Email</label>
+                    <input type="email" name="email" id="registerEmail" class="form-control {% if register_form.email.errors %}is-invalid{% endif %}" placeholder="example@email.com" value="{{ register_form.email.value|default:'' }}" required>
+                    {% if register_form.email.errors %}<div class="form-error">{{ register_form.email.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="registerPassword" class="form-label">Пароль</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password1" id="registerPassword" class="form-control {% if register_form.password1.errors %}is-invalid{% endif %}" placeholder="Создайте пароль" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('registerPassword', this)" title="Показать пароль">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    {% if register_form.password1.errors %}<div class="form-error">{{ register_form.password1.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="registerConfirmPassword" class="form-label">Подтвердите пароль</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password2" id="registerConfirmPassword" class="form-control {% if register_form.password2.errors %}is-invalid{% endif %}" placeholder="Повторите пароль" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('registerConfirmPassword', this)" title="Показать пароль">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    {% if register_form.password2.errors %}<div class="form-error">{{ register_form.password2.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="form-check mb-4">
+                    <input type="checkbox" class="form-check-input" id="acceptTerms" required>
+                    <label class="form-check-label text-muted" for="acceptTerms">
+                        Я принимаю <a href="#" class="text-primary">условия использования</a> и <a href="#" class="text-primary">политику конфиденциальности</a>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-person-plus me-2"></i>Создать аккаунт
+                </button>
+            </form>
+
+            <!-- Форма восстановления пароля -->
+            <form method="post" class="auth-form" id="resetForm">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="password_reset">
+
+                <div class="text-center mb-4">
+                    <i class="bi bi-key text-primary" style="font-size: 2rem;"></i>
+                    <h4 class="mt-3">Восстановление пароля</h4>
+                    <p class="text-muted">Введите email для получения инструкций</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="resetEmail" class="form-label">Email</label>
+                    <input type="email" name="email" id="resetEmail" class="form-control" placeholder="example@email.com" required>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        Отправить инструкции
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="showTab('login')">
+                        Отмена
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Переключение табов
+    function showTab(tabName) {
+        // Скрыть все формы
+        document.querySelectorAll('.auth-form').forEach(form => {
+            form.classList.remove('active');
+        });
+
+        // Показать выбранную форму
+        document.getElementById(tabName + 'Form').classList.add('active');
+
+        // Обновить активный таб
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (tab.dataset.tab === tabName) {
+                tab.classList.add('active');
+            }
+        });
+    }
+
+    // Обработчики для табов
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            showTab(this.dataset.tab);
+        });
+    });
+
+    // Переключение видимости пароля
+    function togglePassword(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
+
+    // Показать форму восстановления пароля
+    function showPasswordReset() {
+        showTab('reset');
+    }
+
+    // Автоматический выбор таба из URL или с сервера (при ошибках)
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let tab = urlParams.get('tab');
+        if (!tab) {
+            const contentEl = document.querySelector('.auth-content');
+            if (contentEl && contentEl.dataset.activeTab) {
+                tab = contentEl.dataset.activeTab;
+            }
+        }
+        if (tab && ['login', 'register', 'reset'].includes(tab)) {
+            showTab(tab);
+        }
+    });
+</script>
+{% endblock %}
