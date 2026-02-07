@@ -248,6 +248,7 @@
         transform: translateY(-2px);
         box-shadow: var(--shadow-md);
     }
+
 </style>
 {% endblock %}
 
@@ -640,16 +641,26 @@
 
         <!-- График расходов по категориям -->
         <div class="card mb-4">
-            <div class="card-header">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h5 class="mb-0"><i class="bi bi-pie-chart me-1"></i>Расходы по категориям</h5>
+                <form method="get" class="d-flex align-items-center gap-2" id="chartMonthForm">
+                    <input type="hidden" name="tab" value="transactions">
+                    <label class="form-label mb-0 small text-muted">Месяц:</label>
+                    <select name="chart_month" class="form-select form-select-sm" style="max-width:180px;" onchange="this.form.submit()">
+                        <option value="">Все время</option>
+                        {% for val, label in chart_available_months %}
+                        <option value="{{ val }}" {% if chart_month == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
             </div>
             <div class="card-body">
                 {% if expense_chart_labels %}
                 <div style="position:relative;height:280px;">
-                    <canvas id="expenseChart"></canvas>
+                    <canvas id="expenseChart" data-total="{{ expense_chart_total|floatformat:0 }}" data-label="{% if chart_month %}за месяц{% else %}всего{% endif %}"></canvas>
                 </div>
                 {% else %}
-                <p class="text-muted text-center py-4 mb-0">Нет данных о расходах</p>
+                <p class="text-muted text-center py-4 mb-0">Нет данных о расходах{% if chart_month %} за выбранный месяц{% endif %}</p>
                 {% endif %}
             </div>
         </div>
@@ -662,36 +673,62 @@
             if (typeof labels === 'string') labels = JSON.parse(labels);
             if (typeof data === 'string') data = JSON.parse(data);
             if (typeof colors === 'string') colors = JSON.parse(colors);
-            var ctx = document.getElementById('expenseChart');
-            if (ctx && labels && labels.length > 0 && data && data.length > 0 && typeof Chart !== 'undefined') {
-                new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: colors,
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'right' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(ctx) {
-                                        var total = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
-                                        var pct = total ? ((ctx.parsed/total)*100).toFixed(1) : 0;
-                                        return ctx.label + ': ' + ctx.parsed.toLocaleString('ru-RU') + ' ₽ (' + pct + '%)';
-                                    }
+            var canvas = document.getElementById('expenseChart');
+            if (!canvas || !labels || labels.length === 0 || !data || data.length === 0 || typeof Chart === 'undefined') return;
+            var totalStr = canvas.getAttribute('data-total') || '0';
+            var labelStr = canvas.getAttribute('data-label') || 'всего';
+            var centerPlugin = {
+                id: 'doughnutCenterText',
+                beforeDatasetsDraw: function(chart) {
+                    if (chart.config.type !== 'doughnut') return;
+                    var meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data.length) return;
+                    var arc = meta.data[0];
+                    var centerX = arc.x;
+                    var centerY = arc.y;
+                    var ctx = chart.ctx;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+                    ctx.fillStyle = 'var(--primary, #4361ee)';
+                    ctx.fillText(totalStr + ' ₽', centerX, centerY - 6);
+                    ctx.font = '12px system-ui, -apple-system, sans-serif';
+                    ctx.fillStyle = '#6c757d';
+                    ctx.fillText(labelStr, centerX, centerY + 10);
+                    ctx.restore();
+                }
+            };
+            Chart.register(centerPlugin);
+            new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    layout: { padding: 0 },
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    var total = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+                                    var pct = total ? ((ctx.parsed/total)*100).toFixed(1) : 0;
+                                    return ctx.label + ': ' + ctx.parsed.toLocaleString('ru-RU') + ' ₽ (' + pct + '%)';
                                 }
                             }
                         }
                     }
-                });
-            }
+                }
+            });
         })();
         </script>
 

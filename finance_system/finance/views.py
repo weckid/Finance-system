@@ -174,6 +174,21 @@ def dashboard(request):
     ).values_list('id', flat=True)
     family_goals = FinancialGoal.objects.filter(family_id__in=user_families_ids)
     transactions = Transaction.objects.filter(user=request.user).order_by('-date', '-created_at')
+
+    # Фильтр по месяцам для графика расходов по категориям
+    chart_month = request.GET.get('chart_month', '').strip()
+    expense_transactions = transactions.filter(type='expense')
+    if chart_month:
+        try:
+            y, m = int(chart_month[:4]), int(chart_month[5:7])
+            start_d = date(y, m, 1)
+            _, last_day = calendar.monthrange(y, m)
+            end_d = date(y, m, last_day)
+            expense_transactions = expense_transactions.filter(
+                date__date__gte=start_d, date__date__lte=end_d
+            )
+        except (ValueError, IndexError):
+            chart_month = ''
     categories = Category.objects.filter(
         Q(owner=request.user) | Q(is_system=True),
         type='expense'
@@ -197,8 +212,9 @@ def dashboard(request):
     category_stats = {}
     total_expenses = 0
     transaction_count = transactions.count()
+    expense_chart_total = 0
 
-    for transaction in transactions.filter(type='expense'):
+    for transaction in expense_transactions:
         if transaction.category:
             cat_name = transaction.category.name
             if cat_name not in category_stats:
@@ -210,13 +226,42 @@ def dashboard(request):
             category_stats[cat_name]['amount'] += float(transaction.amount)
             category_stats[cat_name]['count'] += 1
             total_expenses += float(transaction.amount)
+            expense_chart_total += float(transaction.amount)
 
-    # Рассчитываем проценты
+    expense_chart_total = sum(cat['amount'] for cat in category_stats.values())
     for cat in category_stats.values():
-        if total_expenses > 0:
-            cat['percentage'] = (cat['amount'] / total_expenses) * 100
+        if expense_chart_total > 0:
+            cat['percentage'] = (cat['amount'] / expense_chart_total) * 100
         else:
             cat['percentage'] = 0
+
+    # Общие расходы для вкладки Обзор (все время)
+    total_expenses = sum(float(t.amount) for t in transactions.filter(type='expense'))
+
+    # Доступные месяцы для фильтра графика (из транзакций пользователя)
+    from django.db.models import Min, Max
+    from django.utils import formats
+    agg = Transaction.objects.filter(user=request.user, type='expense').aggregate(
+        first=Min('date'), last=Max('date'))
+    chart_available_months = []
+    if agg['first'] and agg['last']:
+        cur = agg['first'].date().replace(day=1)
+        end = agg['last'].date().replace(day=1)
+        while cur <= end:
+            chart_available_months.append((cur.strftime('%Y-%m'), formats.date_format(cur, 'F Y')))
+            if cur.month == 12:
+                cur = date(cur.year + 1, 1, 1)
+            else:
+                cur = date(cur.year, cur.month + 1, 1)
+    else:
+        today = timezone.now().date()
+        for i in range(11, -1, -1):
+            y, m = today.year, today.month - i
+            while m <= 0:
+                m += 12
+                y -= 1
+            d = date(y, m, 1)
+            chart_available_months.append((d.strftime('%Y-%m'), formats.date_format(d, 'F Y')))
 
     # График расходов по категориям (круговая диаграмма)
     expense_chart_labels = list(category_stats.keys())
@@ -250,6 +295,9 @@ def dashboard(request):
         'expense_chart_labels': json.dumps(expense_chart_labels),
         'expense_chart_data': json.dumps(expense_chart_data),
         'expense_chart_colors': json.dumps(expense_chart_colors),
+        'expense_chart_total': expense_chart_total,
+        'chart_month': chart_month,
+        'chart_available_months': chart_available_months,
         'active_tab': request.GET.get('tab', 'overview'),
     }
 

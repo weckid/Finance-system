@@ -5,8 +5,8 @@ from io import BytesIO
 
 
 def _parse_qr_text(text):
-    """Парсит данные из QR-кода российского чека (t=, s=, fn=, fp=)."""
-    result = {'amount': None, 'date': None}
+    """Парсит данные из QR-кода российского чека (t=, s=, fn=, nn= и др.)."""
+    result = {'amount': None, 'date': None, 'merchant': None}
     if not text or not isinstance(text, str):
         return result
     params = {}
@@ -28,12 +28,15 @@ def _parse_qr_text(text):
         m = re.match(r'^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})', t)
         if m:
             result['date'] = f"{m.group(1)}-{m.group(2)}-{m.group(3)}T{m.group(4)}:{m.group(5)}:00"
+    # Наименование организации (nn) — может быть в QR
+    if params.get('nn') and len(params['nn']) > 2:
+        result['merchant'] = params['nn'].strip()[:100]
     return result
 
 
 def _extract_from_qr(image):
     """Извлекает данные из QR-кода на изображении (pyzbar)."""
-    result = {'amount': None, 'date': None}
+    result = {'amount': None, 'date': None, 'merchant': None}
     try:
         from pyzbar import pyzbar
         from PIL import Image
@@ -52,6 +55,8 @@ def _extract_from_qr(image):
                     result['amount'] = qr['amount']
                 if qr.get('date'):
                     result['date'] = qr['date']
+                if qr.get('merchant'):
+                    result['merchant'] = qr['merchant']
                 if result['amount']:
                     break
     except Exception:
@@ -84,6 +89,8 @@ def extract_receipt_data(image_file):
         result['amount'] = qr_data['amount']
     if qr_data.get('date'):
         result['date'] = qr_data['date']
+    if qr_data.get('merchant'):
+        result['merchant'] = qr_data['merchant']
 
     img_bytes.seek(0)
 
@@ -148,28 +155,46 @@ def extract_receipt_data(image_file):
         if all_amounts:
             result['amount'] = max(all_amounts)
 
+    # Магазин: из QR уже может быть заполнен, иначе — из OCR
+    def _shorten_merchant(name):
+        """Извлекает краткое название из «ООО "Продуктовый рай"» или «Общество... "X"»."""
+        if not name or len(name) < 3:
+            return name
+        m = re.search(r'["«]([^"»]{2,80})["»]', name)
+        if m:
+            return m.group(1).strip()
+        m = re.search(r'(?:ООО|ОАО|ЗАО|ИП)\s+["«]?([^"»\n]{2,60})["»]?', name, re.IGNORECASE)
+        if m:
+            return m.group(1).strip()
+        m = re.search(r'общество[^"«]*["«]([^"»]{2,60})["»]', name, re.IGNORECASE)
+        if m:
+            return m.group(1).strip()
+        return name[:80] if len(name) > 80 else name
+
     lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
     merchant_candidates = []
-    for line in lines[:30]:
+    for line in lines[:40]:
         line = line.strip()
         if len(line) < 4 or re.match(r'^[\d\s.,:]+$', line):
             continue
         if not re.search(r'[а-яА-Яa-zA-Z]', line):
             continue
         line_upper = line.upper()
-        if any(x in line_upper for x in ['ЗАО', 'ООО', 'ИП', 'ТОРГОВЫЙ', 'МАГАЗИН', 'ОБЪЕКТ']):
+        if any(x in line_upper for x in ['ООО', 'ЗАО', 'ИП', 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ', 'ТОРГОВЫЙ', 'ТОРГОВАЯ ТОЧКА', 'МАГАЗИН']):
             merchant_candidates.insert(0, line)
-        elif len(line) > 5 and not re.match(r'^\d+$', line):
+        elif len(line) > 8 and not re.match(r'^\d+$', line):
             merchant_candidates.append(line)
-    if merchant_candidates:
-        result['merchant'] = merchant_candidates[0][:100]
-    elif lines and len(lines[0]) > 6:
+    if merchant_candidates and not result.get('merchant'):
+        raw_merchant = merchant_candidates[0]
+        result['merchant'] = _shorten_merchant(raw_merchant)[:100]
+    elif not result.get('merchant') and lines and len(lines[0]) > 6:
         first = lines[0].strip()
         if re.search(r'[а-яА-Яa-zA-Z]', first):
-            result['merchant'] = first[:100]
+            result['merchant'] = _shorten_merchant(first)[:100]
 
     text_lower = raw_text.lower()
     keywords = [
+        ('Развлечения', ['тур', 'море', 'путешеств', 'отдых', 'туризм', 'отель', 'авиа', 'билет', 'турагентств', 'круиз', 'экскурси', 'кино', 'театр', 'игр']),
         ('Здоровье', ['аптека', 'лекарств', 'клиника', 'врач', 'медицин']),
         ('Кафе и рестораны', ['кафе', 'ресторан', 'кофе', 'обед', 'ужин', 'бар', 'пиццерия']),
         ('Еда', ['продукты', 'молоко', 'хлеб', 'еда', 'супермаркет', 'магнит', 'пятерочка', 'перекресток']),
@@ -178,7 +203,6 @@ def extract_receipt_data(image_file):
         ('Коммунальные услуги', ['жкх', 'коммунал', 'электр', 'газ', 'вода', 'интернет', 'связь']),
         ('Транспорт', ['азс', 'бензин', 'транспорт', 'метро', 'заправка']),
         ('Такси', ['такси', 'яндекс', 'uber']),
-        ('Развлечения', ['кино', 'театр', 'игр']),
     ]
     for cat, words in keywords:
         if any(w in text_lower for w in words):
