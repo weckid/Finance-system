@@ -21,9 +21,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Не создавать уведомления, только вывести список.')
+        parser.add_argument('--verbose', '-v', action='store_true', help='Подробный вывод.')
+        parser.add_argument('--test', action='store_true', help='Создать тестовое уведомление для первой подходящей цели (игнорируя срок).')
 
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
+        verbose = options.get('verbose', False)
+        test_mode = options.get('test', False)
         today = timezone.now().date()
         created = 0
 
@@ -31,6 +35,9 @@ class Command(BaseCommand):
             status='active',
             replenishment_frequency__in=FREQUENCY_DAYS.keys(),
         ).exclude(replenishment_frequency='').select_related('family', 'user')
+
+        if verbose:
+            self.stdout.write(f'Найдено целей с графиком пополнения: {goals.count()}')
 
         for goal in goals:
             days = FREQUENCY_DAYS.get(goal.replenishment_frequency)
@@ -43,9 +50,13 @@ class Command(BaseCommand):
             if hasattr(ref_date, 'date'):
                 ref_date = ref_date.date()
             next_due = ref_date + timedelta(days=days)
-            if today < next_due:
+            if not test_mode and today < next_due:
+                if verbose:
+                    self.stdout.write(f'  Пропуск «{goal.name}»: следующее напоминание {next_due} (сегодня {today})')
                 continue
-            # Нужно напомнить
+            # Нужно напомнить (или --test)
+            if verbose:
+                self.stdout.write(f'  Напоминание: «{goal.name}» (ref={ref_date}, next_due={next_due})')
             display_freq = dict(FinancialGoal.REPLENISHMENT_CHOICES).get(goal.replenishment_frequency) or goal.replenishment_frequency
             title = 'Напоминание: пополнение цели'
             message = f'Цель «{goal.name}»: по графику пополнение {display_freq}. Рекомендуется внести сумму.'
@@ -93,4 +104,7 @@ class Command(BaseCommand):
                 )
                 created += 1
 
-        self.stdout.write(self.style.SUCCESS(f'Создано уведомлений: {created}'))
+        if goals.count() == 0:
+            self.stdout.write(self.style.WARNING('Нет целей с заданным графиком пополнения. Укажите «Обязательное пополнение» при создании/редактировании цели.'))
+        else:
+            self.stdout.write(self.style.SUCCESS(f'Создано уведомлений: {created}'))

@@ -33,8 +33,8 @@ urlpatterns = [
     # AJAX/формы
     path('categories/create/', views.create_category, name='create_category'),
     path('categories/<uuid:category_id>/delete/', views.delete_category, name='delete_category'),
-    path('receipt/upload/', views.upload_receipt, name='upload_receipt'),
-    path('receipt/scan/', views.scan_receipt, name='scan_receipt'),
+    path('receipt/upload/', views.upload_receipt_redirect, name='upload_receipt'),
+    path('receipt/scan/', views.scan_receipt_redirect, name='scan_receipt'),
     path('goals/create/', views.create_goal, name='create_goal'),
     path('goals/<uuid:goal_id>/edit/', views.edit_goal, name='edit_goal'),
     path('goals/<uuid:goal_id>/delete/', views.delete_goal, name='delete_goal'),

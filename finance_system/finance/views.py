@@ -12,9 +12,8 @@ import calendar
 import json
 
 from django.http import JsonResponse, HttpResponse
-from .forms import CustomUserCreationForm, CustomAuthenticationForm, FinancialGoalForm, CategoryForm, ReceiptUploadForm, ProfileUpdateForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, FinancialGoalForm, CategoryForm, ProfileUpdateForm
 from .models import Category, Transaction, FinancialGoal, GoalContribution, Account, Family, FamilyMember, Notification, FamilyInvitation, CustomUser
-from .utils.receipt_ocr import extract_receipt_data
 
 
 def index(request):
@@ -57,20 +56,25 @@ def handle_auth(request):
         form_type = request.POST.get('form_type')
 
         if form_type == 'login':
+            from .models import CustomUser
             login_form = CustomAuthenticationForm(request, data=request.POST)
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+
+            # Проверка заблокированного пользователя до валидации (authenticate возвращает None для is_active=False)
+            blocked_user = CustomUser.objects.filter(Q(username=username) | Q(email=username)).first()
+            if blocked_user and not blocked_user.is_active and password and blocked_user.check_password(password):
+                reason = blocked_user.block_reason or 'Не указана'
+                messages.error(request, f'Аккаунт заблокирован. Причина: {reason}')
+                return render(request, 'finance/auth.html', {
+                    'login_form': login_form,
+                    'register_form': CustomUserCreationForm(),
+                    'active_tab': 'login',
+                })
+
             if login_form.is_valid():
                 username = login_form.cleaned_data.get('username')
                 password = login_form.cleaned_data.get('password')
-                from .models import CustomUser
-                blocked_user = CustomUser.objects.filter(Q(username=username) | Q(email=username)).first()
-                if blocked_user and not blocked_user.is_active:
-                    reason = blocked_user.block_reason or 'Не указана'
-                    messages.error(request, f'Аккаунт заблокирован. Причина: {reason}')
-                    return render(request, 'finance/auth.html', {
-                        'login_form': login_form,
-                        'register_form': CustomUserCreationForm(),
-                        'active_tab': 'login',
-                    })
                 user = authenticate(username=username, password=password)
                 if user is not None:
                     login(request, user)
@@ -364,85 +368,15 @@ def delete_category(request, category_id):
 
 
 @login_required
-def scan_receipt(request):
-    """Сканирование чека (QR + OCR): возвращает JSON с суммой, магазином и категорией."""
-    if request.method != 'POST' or not request.FILES.get('receipt_image'):
-        return JsonResponse({'ok': False, 'error': 'Загрузите изображение чека'})
-    data = {'amount': None, 'merchant': '', 'suggested_category': None, 'date': None}
-    try:
-        image = request.FILES['receipt_image']
-        data = extract_receipt_data(image)
-    except Exception as e:
-        pass
-    category_id = None
-    if data.get('suggested_category'):
-        cat = Category.objects.filter(
-            Q(owner=request.user) | Q(is_system=True),
-            type='expense',
-            name=data['suggested_category']
-        ).first()
-        if cat:
-            category_id = str(cat.id)
-    if not category_id:
-        cat = Category.objects.filter(
-            Q(owner=request.user) | Q(is_system=True),
-            type='expense'
-        ).first()
-        if cat:
-            category_id = str(cat.id)
-    resp = {
-        'ok': True,
-        'amount': data.get('amount'),
-        'merchant': data.get('merchant') or '',
-        'suggested_category': data.get('suggested_category') or '',
-        'category_id': category_id,
-    }
-    if data.get('date'):
-        resp['date'] = data['date']
-    return JsonResponse(resp)
+def scan_receipt_redirect(request):
+    """Редирект: загрузка чеков отключена."""
+    return redirect('dashboard')
 
 
 @login_required
-def upload_receipt(request):
-    """Загрузка чека"""
-    if request.method == 'POST':
-        post_data = request.POST.copy()
-        if not post_data.get('category'):
-            default_cat = Category.objects.filter(
-                Q(owner=request.user) | Q(is_system=True),
-                type='expense'
-            ).first()
-            if default_cat:
-                post_data['category'] = str(default_cat.id)
-        if not post_data.get('date'):
-            from datetime import datetime
-            post_data['date'] = timezone.now().strftime('%Y-%m-%dT%H:%M:%S')
-        form = ReceiptUploadForm(post_data, request.FILES, user=request.user)
-        if form.is_valid():
-            transaction = form.save(commit=False)
-            transaction.user = request.user
-            transaction.type = 'expense'
-            transaction.currency = 'RUB'
-            transaction.created_via = 'scan'
-            transaction.merchant = (request.POST.get('description') or transaction.merchant or '')[:200]
-
-            default_account = Account.objects.filter(owner=request.user, is_active=True).first()
-            if not default_account:
-                default_account = Account.objects.create(
-                    owner=request.user, name='Основной счёт', account_type='debit',
-                    ownership='personal', currency='RUB', is_active=True
-                )
-            transaction.account = default_account
-
-            transaction.save()
-
-            messages.success(request, 'Чек успешно загружен!')
-            return redirect(reverse('dashboard') + '?tab=upload')
-        else:
-            for field, errs in form.errors.items():
-                for e in errs:
-                    messages.error(request, f'{field}: {e}')
-    return redirect(reverse('dashboard') + '?tab=upload')
+def upload_receipt_redirect(request):
+    """Редирект: загрузка чеков отключена."""
+    return redirect('dashboard')
 
 
 def _get_or_create_default_account(user):

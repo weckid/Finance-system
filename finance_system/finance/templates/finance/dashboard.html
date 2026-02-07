@@ -178,29 +178,6 @@
         margin-right: 1rem;
     }
 
-    /* Чеки */
-    .upload-area {
-        border: 2px dashed var(--border-color);
-        border-radius: var(--border-radius);
-        padding: 3rem 2rem;
-        text-align: center;
-        background: linear-gradient(135deg, rgba(67, 97, 238, 0.02), rgba(67, 97, 238, 0.01));
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-bottom: 2rem;
-    }
-
-    .upload-area:hover {
-        border-color: var(--primary);
-        background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(67, 97, 238, 0.02));
-    }
-
-    .upload-icon {
-        font-size: 3rem;
-        color: var(--primary);
-        margin-bottom: 1rem;
-    }
-
     /* Транзакции */
     .transactions-table {
         width: 100%;
@@ -249,6 +226,22 @@
         box-shadow: var(--shadow-md);
     }
 
+    /* Flip card для личных целей */
+    .goal-flip-wrapper { perspective: 1000px; min-height: 340px; }
+    .goal-flip-inner { position: relative; width: 100%; height: 100%; min-height: 340px; transition: transform 0.5s ease; transform-style: preserve-3d; }
+    .goal-flip-wrapper.flipped .goal-flip-inner { transform: rotateY(180deg); }
+    .goal-flip-front, .goal-flip-back { position: absolute; width: 100%; height: 100%; top: 0; left: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    .goal-flip-front { background: #fff; }
+    .goal-flip-back { transform: rotateY(180deg); background: #f8fafc; padding: 1.5rem; overflow-y: auto; border: 1px solid #e2e8f0; }
+    .goal-flip-back .flip-back-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.5rem; font-weight: 600; }
+    .goal-flip-back .flip-back-desc { font-size: 0.9rem; line-height: 1.5; color: #334155; margin-bottom: 1.25rem; white-space: pre-wrap; }
+    .goal-flip-back .flip-back-schedule { font-size: 0.9rem; color: #1e293b; font-weight: 600; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.7); border-radius: 8px; display: inline-block; }
+    .goal-flip-btn { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #fff; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .goal-flip-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: scale(1.05); }
+    .goal-card-header { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1rem; }
+    .goal-card-title-wrap { flex: 1; min-width: 0; }
+    .goal-card-actions { flex-shrink: 0; display: flex; gap: 0.25rem; }
+
 </style>
 {% endblock %}
 
@@ -268,7 +261,6 @@
         <button type="button" class="dashboard-tab" data-tab="goals" onclick="showTab('goals')">Цели</button>
         <button type="button" class="dashboard-tab" data-tab="transactions" onclick="showTab('transactions')">Транзакции</button>
         <button type="button" class="dashboard-tab" data-tab="categories" onclick="showTab('categories')">Категории</button>
-        <button type="button" class="dashboard-tab" data-tab="upload" onclick="showTab('upload')">Загрузка чека</button>
     </div>
 
     <!-- Контент вкладок -->
@@ -471,32 +463,33 @@
 
     <!-- Список целей -->
     {% if goals %}
-    <div class="goals-grid">
+    <div class="goals-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;">
         {% for goal in goals %}
-        <div class="goal-card">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
+        <div class="card h-100 goal-flip-wrapper" id="goal-flip-{{ goal.id }}">
+            <div class="goal-flip-inner">
+                <div class="goal-flip-front card-body">
+                    <div class="goal-card-header">
+                        <button type="button" class="goal-flip-btn" onclick="document.getElementById('goal-flip-{{ goal.id }}').classList.toggle('flipped')" title="Подробное описание и когда пополнять"><i class="bi bi-info-lg"></i></button>
+                        <div class="goal-card-title-wrap">
                             <h5 class="card-title mb-1">{{ goal.name }}</h5>
                             <span class="badge {% if goal.status == 'active' %}bg-success{% elif goal.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
                                 {{ goal.get_status_display }}
                             </span>
                         </div>
+                        <div class="goal-card-actions">
+                            <a href="{% url 'edit_goal' goal.id %}" class="btn btn-outline-primary btn-sm" title="Редактировать"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'delete_goal' goal.id %}" class="btn btn-outline-danger btn-sm" title="Удалить"><i class="bi bi-trash"></i></a>
+                        </div>
                     </div>
-
-                    <p class="card-text text-muted mb-4">{{ goal.description|default:"Без описания"|truncatechars:100 }}</p>
-
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-2">
                             <small class="text-muted">Прогресс</small>
                             <small>{{ goal.progress_percentage|floatformat:1 }}%</small>
                         </div>
-                        <div class="goal-progress">
-                            <div class="goal-progress-bar" data-percent="{{ goal.progress_percentage }}" style="width: 0%"></div>
+                        <div class="progress" style="height:8px;border-radius:4px;background:var(--border-color);">
+                            <div class="progress-bar goal-progress-bar" data-percent="{{ goal.progress_percentage }}" style="width:0%;background:var(--primary);"></div>
                         </div>
                     </div>
-
                     <div class="row text-center mb-3">
                         <div class="col-6">
                             <small class="text-muted d-block">Цель</small>
@@ -507,22 +500,26 @@
                             <strong>{{ goal.deadline|date:"d.m.Y" }}</strong>
                         </div>
                     </div>
-
                     <div class="mb-3">
                         <small class="text-muted">Накоплено: <strong>{{ goal.current_amount|intcomma }} ₽</strong></small>
                     </div>
-
-                    <!-- Форма добавления/вычитания денег -->
                     <form method="post" action="{% url 'add_money_to_goal' goal.id %}" class="goal-amount-form mt-3">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add">
                         <div class="goal-actions-row d-flex gap-2 align-items-center flex-wrap">
-                            <input type="number" name="amount" class="form-control" placeholder="Сумма" required min="1" step="1" style="max-width: 120px;">
+                            <input type="number" name="amount" class="form-control" placeholder="Сумма" required min="1" step="1" style="max-width:120px;">
                             <button type="submit" class="btn btn-success btn-sm goal-btn-add" title="Добавить"><i class="bi bi-plus-circle-fill"></i></button>
                             <button type="submit" class="btn btn-outline-secondary btn-sm goal-btn-subtract" title="Снять"><i class="bi bi-dash-circle-fill"></i></button>
                         </div>
                         <small class="text-muted d-block mt-1">Только целые числа (например: 1000)</small>
                     </form>
+                </div>
+                <div class="goal-flip-back card-body position-relative">
+                    <button type="button" class="goal-flip-btn position-absolute top-0 end-0" onclick="document.getElementById('goal-flip-{{ goal.id }}').classList.toggle('flipped')" title="Назад"><i class="bi bi-x-lg"></i></button>
+                    <div class="flip-back-title mt-1">Подробное описание</div>
+                    <div class="flip-back-desc">{{ goal.description|default:"Описание не указано." }}</div>
+                    <div class="flip-back-title">Когда нужно пополнять</div>
+                    <span class="flip-back-schedule">{{ goal.get_replenishment_display_short }}</span>
                 </div>
             </div>
         </div>
@@ -801,9 +798,9 @@
             <div class="card-body text-center py-5">
                 <i class="bi bi-receipt text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
                 <h4 class="mt-3 mb-2">Нет транзакций</h4>
-                <p class="text-muted mb-4">Загрузите первый чек</p>
-                <button class="btn btn-success" onclick="showTab('upload')">
-                    Загрузить чек
+                <p class="text-muted mb-4">Добавьте первую транзакцию вручную или импортируйте из Excel</p>
+                <button class="btn btn-primary" onclick="showTab('transactions')">
+                    Добавить транзакцию
                 </button>
             </div>
         </div>
@@ -875,72 +872,10 @@
             {% endfor %}
         </div>
     </div>
-
-    <!-- Вкладка Загрузка чека -->
-    <div class="dashboard-content" id="uploadContent">
-        <div class="mb-4">
-            <h2>Загрузка чека</h2>
-        </div>
-
-        <!-- Форма загрузки -->
-        <div class="card">
-            <div class="card-body">
-                <form method="post" action="{% url 'upload_receipt' %}" enctype="multipart/form-data" id="uploadForm">
-                    {% csrf_token %}
-
-                    <div class="mb-4">
-                        <label for="receiptImage" class="upload-area d-block mb-0" style="cursor:pointer;">
-                            <div class="upload-icon">
-                                <i class="bi bi-cloud-upload"></i>
-                            </div>
-                            <h5>Нажмите для загрузки чека</h5>
-                            <p class="text-muted mb-0">или перетащите файл сюда</p>
-                            <input type="file" name="receipt_image" id="receiptImage" accept="image/*" class="d-none" onchange="window.previewImage(this)">
-                        </label>
-                        <div id="imagePreview" class="mt-3" style="display: none;">
-                            <img id="previewImage" src="#" alt="Предпросмотр" class="img-thumbnail" style="max-height: 200px;">
-                            <div class="mt-2">
-                                <button type="button" class="btn btn-primary btn-sm" id="btnScanReceipt" onclick="window.runReceiptScan()">
-                                    <i class="bi bi-upc-scan me-1"></i>Сканировать чек
-                                </button>
-                                <span class="text-muted small ms-2">Сумма, магазин и категория заполнятся автоматически</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <input type="hidden" name="date" id="receiptDate" value="">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Категория *</label>
-                            <select name="category" id="receiptCategory" class="form-select" required>
-                                <option value="">Выберите категорию</option>
-                                {% for category in categories %}
-                                <option value="{{ category.id }}">{{ category.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Сумма (₽) *</label>
-                            <input type="number" name="amount" id="receiptAmount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Магазин</label>
-                            <input type="text" name="description" id="receiptDescription" class="form-control" placeholder="Название магазина">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-upload me-2"></i>Загрузить чек
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
 </div>
 
 {% endblock %}
 {% block extra_js %}
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 (function() {
     // Переключение вкладок — глобально для onclick
@@ -1053,132 +988,10 @@
         if (el) el.style.display = 'none';
     };
 
-    window.previewImage = function(input) {
-        if (!input || !input.files || !input.files[0]) return;
-        var reader = new FileReader();
-        var preview = document.getElementById('previewImage');
-        var previewContainer = document.getElementById('imagePreview');
-        reader.onload = function(e) {
-            if (preview) preview.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(input.files[0]);
-    };
-
-    function parseQR(text) {
-        var r = { amount: null, date: null, merchant: '' };
-        var p = {};
-        (text || '').replace(/(?:^|[?&;])([^=]+)=([^&;\s]*)/g, function(_, k, v) {
-            try { p[k.toLowerCase()] = decodeURIComponent((v || '').trim()); } catch(e) { p[k.toLowerCase()] = (v || '').trim(); }
-            return _;
-        });
-        if (p.s) {
-            var s = parseFloat(String(p.s).replace(',', '.').replace(/\s/g, ''));
-            if (!isNaN(s) && s > 0 && s < 1e8) r.amount = Math.round(s * 100) / 100;
-        }
-        if (p.t) {
-            var m = String(p.t).match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
-            if (m) r.date = m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00';
-        }
-        if (p.nn && p.nn.length > 3) r.merchant = p.nn;
-        else if (p.org && p.org.length > 3) r.merchant = p.org;
-        return r;
-    }
-
-    window.runReceiptScan = function() {
-        if (typeof Html5Qrcode === 'undefined') {
-            alert('Библиотека QR не загружена. Обновите страницу.');
-            return;
-        }
-        var input = document.getElementById('receiptImage');
-        if (!input || !input.files || !input.files[0]) { alert('Сначала загрузите фото чека'); return; }
-        var amountEl = document.getElementById('receiptAmount');
-        var descEl = document.getElementById('receiptDescription');
-        var catEl = document.getElementById('receiptCategory');
-        var dateEl = document.getElementById('receiptDate');
-        var btn = document.getElementById('btnScanReceipt');
-        var form = document.getElementById('uploadForm');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Сканирование...'; }
-
-        var qrReader = document.getElementById('qrReaderScan');
-        if (!qrReader) {
-            qrReader = document.createElement('div');
-            qrReader.id = 'qrReaderScan';
-            qrReader.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;';
-            document.body.appendChild(qrReader);
-        }
-
-        var html5Qr = new Html5Qrcode('qrReaderScan');
-        html5Qr.scanFile(input.files[0], false).then(function(qrText) {
-            var qr = parseQR(qrText);
-            if (qr.amount && amountEl) amountEl.value = qr.amount;
-            if (qr.date && dateEl) dateEl.value = qr.date;
-            if (qr.merchant && descEl) descEl.value = qr.merchant;
-        }).catch(function() { /* QR не найден — пробуем сервер */ }).finally(function() {
-            html5Qr.clear().catch(function(){});
-            if (!dateEl.value && dateEl) {
-                var now = new Date();
-                dateEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + 'T' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-            }
-            var fd = new FormData();
-            fd.append('receipt_image', input.files[0]);
-            fd.append('csrfmiddlewaretoken', document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value);
-            fetch('{% url "scan_receipt" %}', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.ok) {
-                        if (data.amount != null && amountEl) amountEl.value = data.amount;
-                        if (data.merchant && descEl && !descEl.value) descEl.value = data.merchant;
-                        if (data.category_id && catEl) catEl.value = data.category_id;
-                        if (data.date && dateEl) dateEl.value = data.date;
-                        if (amountEl.value && form) form.submit();
-                        else if (!amountEl.value) alert('Не удалось извлечь сумму. Убедитесь, что на фото виден QR-код чека.');
-                    } else {
-                        if (!amountEl.value) alert(data.error || 'Ошибка сканирования');
-                        else if (form) form.submit();
-                    }
-                })
-                .catch(function() {
-                    if (amountEl.value && form) form.submit();
-                    else alert('Ошибка соединения. Проверьте подключение к интернету.');
-                })
-                .finally(function() {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-upc-scan me-1"></i>Сканировать чек'; }
-                });
-        });
-    };
-
-    var uploadArea = document.querySelector('.upload-area');
-    var receiptInput = document.getElementById('receiptImage');
-    if (uploadArea && receiptInput) {
-        uploadArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'var(--primary)';
-            this.style.backgroundColor = 'rgba(67, 97, 238, 0.05)';
-        });
-        uploadArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'var(--border-color)';
-            this.style.backgroundColor = '';
-        });
-        uploadArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            if (e.dataTransfer.files.length) {
-                receiptInput.files = e.dataTransfer.files;
-                window.previewImage(receiptInput);
-            }
-        });
-    }
-
     function onReady() {
         init();
-        var dateEl = document.getElementById('receiptDate');
-        if (dateEl && !dateEl.value) {
-            var now = new Date();
-            dateEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + 'T' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-        }
         var tab = new URLSearchParams(window.location.search).get('tab');
-        if (tab && ['overview', 'goals', 'transactions', 'categories', 'upload'].indexOf(tab) >= 0) {
+        if (tab && ['overview', 'goals', 'transactions', 'categories'].indexOf(tab) >= 0) {
             window.showTab(tab);
             if (tab === 'goals' && new URLSearchParams(window.location.search).get('family_id')) {
                 setTimeout(function() { window.showCreateGoalForm(); }, 100);

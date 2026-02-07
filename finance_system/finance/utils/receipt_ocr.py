@@ -119,21 +119,38 @@ def extract_receipt_data(image_file):
         img = enhancer.enhance(1.3)
         raw_text = ''
         for lang in ('rus+eng', 'rus', 'eng'):
-            try:
-                raw_text = pytesseract.image_to_string(img, lang=lang, config='--psm 6 --oem 3')
-                if raw_text and len(raw_text.strip()) > 10:
-                    break
-            except Exception:
+            for psm in (6, 4, 3):
                 try:
-                    raw_text = pytesseract.image_to_string(img, lang=lang)
-                    if raw_text and len(raw_text.strip()) > 10:
-                        break
+                    t = pytesseract.image_to_string(img, lang=lang, config='--psm %d --oem 3' % psm)
+                    if t and len(t.strip()) > len(raw_text.strip()):
+                        raw_text = t
                 except Exception:
-                    raw_text = ''
+                    pass
+            if raw_text and len(raw_text.strip()) > 20:
+                break
     except Exception:
         raw_text = ''
 
     result['raw_text'] = raw_text
+
+    # Дата из OCR (если не получена из QR)
+    if not result.get('date') and raw_text:
+        date_patterns = [
+            (r'(\d{2})[./](\d{2})[./](\d{4})\s+(\d{1,2}):(\d{2})', lambda g: (int(g[0]), int(g[1]), int(g[2]), int(g[3]), int(g[4]))),  # 26.06.2025 10:40 -> d,m,y,h,mi
+            (r'(\d{2})[./](\d{2})[./](\d{4})', lambda g: (int(g[0]), int(g[1]), int(g[2]), 12, 0)),
+            (r'(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})', lambda g: (int(g[2]), int(g[1]), int(g[0]), int(g[3]), int(g[4]))),  # 2025-06-26 10:40
+            (r'(\d{4})-(\d{2})-(\d{2})', lambda g: (int(g[2]), int(g[1]), int(g[0]), 12, 0)),
+        ]
+        for pat, parse in date_patterns:
+            m = re.search(pat, raw_text)
+            if m:
+                try:
+                    d, mo, y, h, mi = parse(m.groups())
+                    if 1 <= mo <= 12 and 1 <= d <= 31 and 2020 <= y <= 2030 and 0 <= h <= 23 and 0 <= mi <= 59:
+                        result['date'] = f"{y}-{mo:02d}-{d:02d}T{h:02d}:{mi:02d}:00"
+                        break
+                except (ValueError, IndexError):
+                    continue
 
     if not result['amount'] and raw_text:
         amount_patterns = [
@@ -173,16 +190,17 @@ def extract_receipt_data(image_file):
 
     lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
     merchant_candidates = []
-    for line in lines[:40]:
+    org_keywords = ['ооо', 'зао', 'ип ', 'общество', 'ограниченн', 'торгов', 'магазин', 'точка', 'продуктовый', 'сеть']
+    for line in lines[:50]:
         line = line.strip()
-        if len(line) < 4 or re.match(r'^[\d\s.,:]+$', line):
+        if len(line) < 5 or re.match(r'^[\d\s.,:]+$', line):
             continue
         if not re.search(r'[а-яА-Яa-zA-Z]', line):
             continue
-        line_upper = line.upper()
-        if any(x in line_upper for x in ['ООО', 'ЗАО', 'ИП', 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ', 'ТОРГОВЫЙ', 'ТОРГОВАЯ ТОЧКА', 'МАГАЗИН']):
+        line_lower = line.lower()
+        if any(kw in line_lower for kw in org_keywords) and len(line) > 10:
             merchant_candidates.insert(0, line)
-        elif len(line) > 8 and not re.match(r'^\d+$', line):
+        elif len(line) > 10 and not re.match(r'^\d+$', line) and 'инн' not in line_lower:
             merchant_candidates.append(line)
     if merchant_candidates and not result.get('merchant'):
         raw_merchant = merchant_candidates[0]
