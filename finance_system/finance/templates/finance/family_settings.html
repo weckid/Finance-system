@@ -70,6 +70,37 @@
             </form>
         </div>
     </div>
+    {% if is_creator %}
+    <div class="card mt-4 border-danger">
+        <div class="card-body">
+            <h5 class="text-danger mb-2">Опасная зона</h5>
+            <p class="text-muted small mb-2">Удаление семьи нельзя отменить. Будут удалены все участники, семейные счета, цели и связанные данные.</p>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteFamilyModal">
+                <i class="bi bi-trash me-1"></i>Удалить семью
+            </button>
+        </div>
+    </div>
+    <div class="modal fade" id="deleteFamilyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">Удалить семью?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Семья «{{ family.name }}» и все связанные данные будут удалены безвозвратно. Продолжить?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <form method="post" action="{% url 'family_delete' family.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Удалить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Модальное окно обрезки -->

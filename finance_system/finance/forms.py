@@ -371,6 +371,18 @@ class ProfileUpdateForm(forms.ModelForm):
             'monthly_income': 'Месячный доход (₽)',
         }
 
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if not phone:
+            return phone or ''
+        phone_clean = re.sub(r'[\s\-\(\)]', '', str(phone).strip())
+        if not phone_clean:
+            return ''
+        # Формат: +7XXXXXXXXXX или 8XXXXXXXXXX или 7XXXXXXXXXX (10 цифр для РФ)
+        if not re.match(r'^\+?[78]?\d{10,15}$', phone_clean):
+            raise ValidationError('Введите корректный номер (например: +7 999 123-45-67 или 89991234567).')
+        return phone
+
 
 # forms.py - ReceiptUploadForm
 class ReceiptUploadForm(forms.ModelForm):

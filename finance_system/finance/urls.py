@@ -48,6 +48,7 @@ urlpatterns = [
     path('family/create/', views.family_create, name='family_create'),
     path('family/<uuid:family_id>/', views.family_detail, name='family_detail'),
     path('family/<uuid:family_id>/settings/', views.family_settings, name='family_settings'),
+    path('family/<uuid:family_id>/delete/', views.family_delete, name='family_delete'),
     path('family/<uuid:family_id>/member/<uuid:member_id>/display-name/', views.family_member_display_name, name='family_member_display_name'),
     path('family/<uuid:family_id>/goal/create/', views.family_goal_create, name='family_goal_create'),
     path('family/<uuid:family_id>/invite-link/', views.family_get_invite_link, name='family_get_invite_link'),

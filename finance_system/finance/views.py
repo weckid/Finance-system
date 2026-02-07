@@ -733,10 +733,15 @@ def add_money_to_goal(request, goal_id):
 @login_required
 def family_list(request):
     """Список семей пользователя"""
+    from .forms import FamilyForm
     families = Family.objects.filter(created_by=request.user) | Family.objects.filter(members__user=request.user)
     families = families.distinct()
     families_with_avatars = [(f, _family_avatar_url(f)) for f in families]
-    return render(request, 'finance/family_list.html', {'families_with_avatars': families_with_avatars})
+    return render(request, 'finance/family_list.html', {
+        'families_with_avatars': families_with_avatars,
+        'form': FamilyForm(),
+        'show_create_form': False,
+    })
 
 
 @login_required
@@ -1218,7 +1223,23 @@ def family_settings(request, family_id):
         return redirect('family_detail', family_id=family_id)
     return render(request, 'finance/family_settings.html', {
         'family': family, 'family_avatar_url': _family_avatar_url(family),
+        'is_creator': family.created_by == request.user,
     })
+
+
+@login_required
+def family_delete(request, family_id):
+    """Удаление семьи — только создатель."""
+    family = get_object_or_404(Family, id=family_id)
+    if family.created_by != request.user:
+        messages.error(request, 'Удалить семью может только её создатель')
+        return redirect('family_detail', family_id=family_id)
+    if request.method == 'POST':
+        name = family.name
+        family.delete()
+        messages.success(request, f'Семья «{name}» удалена')
+        return redirect('family_list')
+    return redirect('family_settings', family_id=family_id)
 
 
 @login_required

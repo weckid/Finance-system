@@ -768,12 +768,12 @@
                                 <th>Дата</th>
                                 <th>Категория</th>
                                 <th>Сумма</th>
-                                <th>Описание</th>
+                                <th>Магазин</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for transaction in transactions %}
-                            <tr>
+                            <tr class="{% if forloop.counter > 10 %}trans-more{% endif %}" {% if forloop.counter > 10 %}style="display:none"{% endif %}>
                                 <td>{{ transaction.date|date:"d.m.Y" }}</td>
                                 <td>
                                     {% if transaction.category %}
@@ -785,12 +785,17 @@
                                     {% endif %}
                                 </td>
                                 <td><strong>{{ transaction.amount }} ₽</strong></td>
-                                <td>{{ transaction.description|default:"—"|truncatechars:30 }}</td>
+                                <td>{{ transaction.merchant|default:transaction.description|default:"—"|truncatechars:40 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% if transactions|length > 10 %}
+                <div class="card-footer text-center py-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="showMoreTransactions">Показать ещё</button>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% else %}
@@ -987,6 +992,21 @@
         var el = document.getElementById('createCategoryForm');
         if (el) el.style.display = 'none';
     };
+
+    var showMoreBtn = document.getElementById('showMoreTransactions');
+    if (showMoreBtn) {
+        showMoreBtn.addEventListener('click', function() {
+            var hidden = document.querySelectorAll('tbody tr.trans-more');
+            var toShow = Math.min(10, hidden.length);
+            for (var i = 0; i < toShow; i++) {
+                hidden[i].style.display = '';
+                hidden[i].classList.remove('trans-more');
+            }
+            if (document.querySelectorAll('tbody tr.trans-more').length === 0) {
+                showMoreBtn.closest('.card-footer').style.display = 'none';
+            }
+        });
+    }
 
     function onReady() {
         init();
