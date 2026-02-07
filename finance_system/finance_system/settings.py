@@ -66,12 +66,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'finance_system.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# По умолчанию SQLite. Для PostgreSQL задайте переменные окружения:
+# DB_ENGINE=postgresql, DB_NAME=finance_db, DB_USER=postgres, DB_PASSWORD=..., DB_HOST=localhost, DB_PORT=5432
+import os
+_db_engine = os.getenv('DB_ENGINE', 'sqlite3')
+if _db_engine == 'postgresql':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'finance_db'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

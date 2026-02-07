@@ -372,13 +372,14 @@ class ProfileUpdateForm(forms.ModelForm):
         }
 
 
-# forms.py - исправляем ReceiptUploadForm
+# forms.py - ReceiptUploadForm
 class ReceiptUploadForm(forms.ModelForm):
     """Форма загрузки чека"""
 
     class Meta:
         model = Transaction
         fields = ['receipt_image', 'amount', 'category', 'description', 'date']
+        # description и receipt_image опциональны для ручного ввода
         widgets = {
             'receipt_image': forms.FileInput(attrs={
                 'class': 'form-control',
@@ -405,9 +406,10 @@ class ReceiptUploadForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        self.fields['description'].required = False
         if user:
-            from django.db.models import Q  # Добавить импорт
-            from .models import Category  # Добавить импорт
+            from django.db.models import Q
+            from .models import Category
             self.fields['category'].queryset = Category.objects.filter(
                 Q(owner=user) | Q(is_system=True),
                 type='expense'

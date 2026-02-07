@@ -285,13 +285,16 @@
             <div class="stat-card">
                 <div class="stat-value text-danger">{{ total_expenses|floatformat:0 }} ₽</div>
                 <div class="stat-label">Расходы</div>
-                <small class="text-muted">Всего транзакций</small>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ expense_progress_pct }}%" aria-valuenow="{{ expense_progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted">{{ transaction_count }} транзакций</small>
             </div>
 
             <div class="stat-card">
                 <div class="stat-value text-success">{{ total_current_amount|floatformat:0 }} ₽</div>
                 <div class="stat-label">Накоплено</div>
-                <small class="text-muted">По всем целям</small>
+                <small class="text-muted">из {{ total_target_amount|floatformat:0 }} ₽</small>
             </div>
 
             <div class="stat-card">
@@ -565,7 +568,7 @@
                 <div class="card-body">
                     <form method="post" action="{% url 'add_transaction' %}">
                         {% csrf_token %}
-                        <div class="row g-3">
+                        <div class="row g-3 align-items-end">
                             <div class="col-md-2">
                                 <label class="form-label">Дата</label>
                                 <input type="date" name="date" class="form-control" value="{% now 'Y-m-d' %}">
@@ -573,13 +576,6 @@
                             <div class="col-md-2">
                                 <label class="form-label">Сумма (₽) *</label>
                                 <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required placeholder="0">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Тип</label>
-                                <select name="type" class="form-select">
-                                    <option value="expense">Расход</option>
-                                    <option value="income">Доход</option>
-                                </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Категория</label>
@@ -600,15 +596,11 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Описание</label>
-                                <input type="text" name="description" class="form-control" placeholder="Описание операции">
+                            <div class="col-md-2">
+                                <label class="form-label">Магазин</label>
+                                <input type="text" name="merchant" class="form-control" placeholder="Название">
                             </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Магазин/Продавец</label>
-                                <input type="text" name="merchant" class="form-control" placeholder="Название магазина">
-                            </div>
-                            <div class="col-12 col-md-2 d-flex align-items-end">
+                            <div class="col-md-1">
                                 <button type="submit" class="btn btn-primary w-100">Добавить</button>
                             </div>
                         </div>
@@ -622,7 +614,7 @@
             <div class="card">
                 <div class="card-header"><h6 class="mb-0">Импорт транзакций из Excel</h6></div>
                 <div class="card-body">
-                    <p class="text-muted small mb-3">Колонки: Дата | Сумма | Тип (expense/income) | Описание | Категория | Магазин. Первая строка — заголовки.</p>
+                    <p class="text-muted small mb-3">Колонки: Дата | Сумма | Категория | Магазин. Первая строка — заголовки.</p>
                     <form method="post" action="{% url 'import_transactions_excel' %}" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="row g-3 align-items-end">
@@ -648,6 +640,58 @@
                 </div>
             </div>
         </div>
+
+        <!-- График расходов по месяцам -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-1"></i>Расходы по месяцам</h5>
+            </div>
+            <div class="card-body">
+                <div style="position:relative;height:220px;">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+        (function() {
+            var months = {{ expense_chart_months|safe }};
+            var data = {{ expense_chart_data|safe }};
+            if (typeof months === 'string') months = JSON.parse(months);
+            if (typeof data === 'string') data = JSON.parse(data);
+            var ctx = document.getElementById('expenseChart');
+            if (ctx && months && data && typeof Chart !== 'undefined') {
+                var colors = ['#dc3545','#fd7e14','#ffc107','#28a745','#20c997','#17a2b8','#6610f2','#e83e8c','#6f42c1','#fd7e14','#28a745','#17a2b8'];
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors.slice(0, months.length),
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        var total = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+                                        var pct = total ? ((ctx.parsed/total)*100).toFixed(1) : 0;
+                                        return ctx.label + ': ' + ctx.parsed.toLocaleString('ru-RU') + ' ₽ (' + pct + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })();
+        </script>
 
         <!-- Статистика расходов -->
         {% if category_stats %}

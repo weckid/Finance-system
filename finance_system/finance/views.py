@@ -160,6 +160,10 @@ def site_admin_panel(request):
 def dashboard(request):
     """Панель управления со всеми вкладками"""
     user_goals = FinancialGoal.objects.filter(user=request.user)
+    user_families_ids = Family.objects.filter(
+        Q(created_by=request.user) | Q(members__user=request.user)
+    ).values_list('id', flat=True)
+    family_goals = FinancialGoal.objects.filter(family_id__in=user_families_ids)
     transactions = Transaction.objects.filter(user=request.user).order_by('-date', '-created_at')
     categories = Category.objects.filter(
         Q(owner=request.user) | Q(is_system=True),
@@ -174,11 +178,11 @@ def dashboard(request):
     ).order_by('_sort', 'name')
 
     # Статистика для вкладки Обзор
-    total_goals = user_goals.count()
-    active_goals = user_goals.filter(status='active').count()
+    total_goals = user_goals.count() + family_goals.count()
+    active_goals = user_goals.filter(status='active').count() + family_goals.filter(status='active').count()
 
-    total_current_amount = sum([float(goal.current_amount) for goal in user_goals])
-    total_target_amount = sum([float(goal.target_amount) for goal in user_goals])
+    total_current_amount = sum([float(g.current_amount) for g in user_goals]) + sum([float(g.current_amount) for g in family_goals])
+    total_target_amount = sum([float(g.target_amount) for g in user_goals]) + sum([float(g.target_amount) for g in family_goals])
 
     # Статистика расходов
     category_stats = {}
@@ -205,6 +209,32 @@ def dashboard(request):
         else:
             cat['percentage'] = 0
 
+    # График расходов по месяцам (последние 12 месяцев)
+    from django.db.models.functions import TruncMonth
+    expense_monthly = Transaction.objects.filter(
+        user=request.user, type='expense'
+    ).annotate(month=TruncMonth('date')).values('month').annotate(
+        total=Sum('amount')
+    ).order_by('month')
+    expense_chart_months = []
+    expense_chart_data = []
+    today = timezone.now().date()
+    for i in range(11, -1, -1):
+        y, m = today.year, today.month - i
+        while m <= 0:
+            m += 12
+            y -= 1
+        month_str = date(y, m, 1).strftime('%Y-%m')
+        expense_chart_months.append(month_str)
+        val = 0
+        for row in expense_monthly:
+            if row.get('month'):
+                row_str = row['month'].strftime('%Y-%m') if hasattr(row['month'], 'strftime') else str(row['month'])[:7]
+                if row_str == month_str:
+                    val = float(row.get('total') or 0)
+                    break
+        expense_chart_data.append(val)
+
     user_families = Family.objects.filter(
         Q(created_by=request.user) | Q(members__user=request.user)
     ).distinct()
@@ -229,7 +259,10 @@ def dashboard(request):
         'category_count': categories.count(),
         'system_category_count': categories.filter(is_system=True).count(),
         'category_stats': category_stats,
-        'active_tab': request.GET.get('tab', 'overview'),  # Добавляем активную вкладку
+        'expense_chart_months': json.dumps(expense_chart_months),
+        'expense_chart_data': json.dumps(expense_chart_data),
+        'expense_progress_pct': min(100, int(total_expenses) / max(100000, int(total_expenses)) * 100) if total_expenses else 0,
+        'active_tab': request.GET.get('tab', 'overview'),
     }
 
     return render(request, 'finance/dashboard.html', context)
@@ -345,6 +378,9 @@ def upload_receipt(request):
             ).first()
             if default_cat:
                 post_data['category'] = str(default_cat.id)
+        if not post_data.get('date'):
+            from datetime import datetime
+            post_data['date'] = timezone.now().strftime('%Y-%m-%dT%H:%M:%S')
         form = ReceiptUploadForm(post_data, request.FILES, user=request.user)
         if form.is_valid():
             transaction = form.save(commit=False)
@@ -365,11 +401,12 @@ def upload_receipt(request):
             transaction.save()
 
             messages.success(request, 'Чек успешно загружен!')
-            return redirect('dashboard')
-    else:
-        form = ReceiptUploadForm(user=request.user)
-
-    return redirect('dashboard')
+            return redirect(reverse('dashboard') + '?tab=upload')
+        else:
+            for field, errs in form.errors.items():
+                for e in errs:
+                    messages.error(request, f'{field}: {e}')
+    return redirect(reverse('dashboard') + '?tab=upload')
 
 
 def _get_or_create_default_account(user):
@@ -389,8 +426,7 @@ def add_transaction(request):
     if request.method != 'POST':
         return redirect(reverse('dashboard') + '?tab=transactions')
     amount = request.POST.get('amount')
-    trans_type = request.POST.get('type', 'expense')
-    description = (request.POST.get('description') or '')[:500]
+    trans_type = 'expense'
     cat_id = request.POST.get('category')
     account_id = request.POST.get('account')
     date_str = request.POST.get('date')
@@ -428,7 +464,7 @@ def add_transaction(request):
     Transaction.objects.create(
         user=request.user, account=account, category=category,
         amount=amount_val, type=trans_type, currency='RUB',
-        description=description, merchant=merchant or None,
+        description='', merchant=merchant or None,
         date=trans_date, created_via='manual'
     )
     messages.success(request, 'Транзакция добавлена')
@@ -471,10 +507,8 @@ def import_transactions_excel(request):
         try:
             date_cell = row[0]
             amount_cell = row[1]
-            type_cell = (row[2] if len(row) > 2 else 'expense') or 'expense'
-            desc_cell = (row[3] if len(row) > 3 else '') or ''
-            cat_cell = (row[4] if len(row) > 4 else '') or ''
-            merchant_cell = (row[5] if len(row) > 5 else '') or ''
+            cat_cell = (row[2] if len(row) > 2 else '') or ''
+            merchant_cell = (row[3] if len(row) > 3 else '') or ''
             if date_cell is None or amount_cell is None:
                 continue
             if hasattr(date_cell, 'date'):
@@ -494,11 +528,6 @@ def import_transactions_excel(request):
             if amount_val <= 0:
                 continue
             trans_type = 'expense'
-            type_lower = str(type_cell).lower().strip()
-            if type_lower in ('income', 'доход', 'приход'):
-                trans_type = 'income'
-            elif type_lower in ('expense', 'расход'):
-                trans_type = 'expense'
             category = None
             if cat_cell:
                 cat_name = str(cat_cell).strip().lower()
@@ -511,7 +540,7 @@ def import_transactions_excel(request):
             Transaction.objects.create(
                 user=request.user, account=account, category=category,
                 amount=amount_val, type=trans_type, currency='RUB',
-                description=str(desc_cell).strip()[:500] or '',
+                description='',
                 merchant=str(merchant_cell).strip()[:200] or None,
                 date=trans_date, created_via='import'
             )
@@ -538,13 +567,13 @@ def download_transactions_example(request):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'Транзакции'
-    headers = ['Дата', 'Сумма', 'Тип', 'Описание', 'Категория', 'Магазин/Продавец']
+    headers = ['Дата', 'Сумма', 'Категория', 'Магазин/Продавец']
     for col, h in enumerate(headers, 1):
         ws.cell(row=1, column=col, value=h)
     example_rows = [
-        ['2025-01-15', 1500, 'expense', 'Продукты', 'Еда', 'Пятёрочка'],
-        ['2025-01-16', 350, 'expense', 'Обед', 'Кафе и рестораны', 'Шоколадница'],
-        ['2025-01-17', 2500, 'income', 'Зарплата', '', ''],
+        ['2025-01-15', 1500, 'Еда', 'Пятёрочка'],
+        ['2025-01-16', 350, 'Кафе и рестораны', 'Шоколадница'],
+        ['2025-01-17', 2500, '', ''],
     ]
     for row_idx, row_data in enumerate(example_rows, 2):
         for col_idx, val in enumerate(row_data, 1):
@@ -885,20 +914,26 @@ def family_detail(request, family_id):
                 y -= 1
             d = date(y, m, 1)
             chart_available_months.append((d.strftime('%Y-%m'), formats.date_format(d, 'F Y')))
-    # Собираем все месяцы и по каждой цели — сумму за месяц
-    months_set = set()
+    # Собираем все месяцы (последние 12) и по каждой цели — сумму за месяц
+    today = timezone.now().date()
+    chart_labels = []
+    for i in range(11, -1, -1):
+        y, m = today.year, today.month - i
+        while m <= 0:
+            m += 12
+            y -= 1
+        d = date(y, m, 1)
+        chart_labels.append(d.strftime('%Y-%m'))
     by_goal = defaultdict(dict)  # goal_id -> { month_str: total }
     for row in contributions_raw:
         month_val = row.get('month')
         if month_val:
             month_str = formats.date_format(month_val, 'Y-m')
-            months_set.add(month_str)
             gid = row.get('goal_id')
             gname = row.get('goal__name') or 'Цель'
             if gid not in by_goal:
                 by_goal[gid] = {'name': gname, 'months': {}}
             by_goal[gid]['months'][month_str] = float(row.get('total') or 0)
-    chart_labels = sorted(months_set) if months_set else []
     chart_datasets = []
     colors = [
         'rgba(67, 97, 238, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(234, 88, 12, 0.8)',
