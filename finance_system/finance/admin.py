@@ -3,10 +3,9 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from .models import (
-    CustomUser, UserProfile, Family, FamilyMember, Account,
-    Category, Transaction, Budget, FinancialGoal, GoalContribution, CategorizationRule,
-    Forecast, ImportTemplate, Notification, FamilyInvitation,
-    Report, MLModel
+    CustomUser, Family, FamilyMember, Account,
+    Category, Transaction, Budget, FinancialGoal, GoalContribution,
+    Notification, FamilyInvitation
 )
 
 @admin.register(CustomUser)
@@ -23,11 +22,6 @@ class CustomUserAdmin(UserAdmin):
         ('Разрешения', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Важные даты', {'fields': ('last_login', 'date_joined')}),
     )
-
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'language', 'notification_email', 'notification_push')
-    search_fields = ('user__username', 'user__email')
 
 @admin.register(Family)
 class FamilyAdmin(admin.ModelAdmin):
@@ -100,24 +94,6 @@ class GoalContributionAdmin(admin.ModelAdmin):
     date_hierarchy = 'contributed_at'
 
 
-@admin.register(CategorizationRule)
-class CategorizationRuleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'rule_type', 'pattern', 'category', 'priority', 'is_active')
-    list_filter = ('rule_type', 'is_active')
-    search_fields = ('name', 'pattern', 'user__username')
-
-@admin.register(Forecast)
-class ForecastAdmin(admin.ModelAdmin):
-    list_display = ('user', 'forecast_type', 'confidence', 'created_at', 'valid_until')
-    list_filter = ('forecast_type',)
-    search_fields = ('user__username',)
-
-@admin.register(ImportTemplate)
-class ImportTemplateAdmin(admin.ModelAdmin):
-    list_display = ('name', 'bank_name', 'file_format', 'user', 'is_active')
-    list_filter = ('file_format', 'is_active')
-    search_fields = ('name', 'bank_name', 'user__username')
-
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
@@ -130,14 +106,3 @@ class FamilyInvitationAdmin(admin.ModelAdmin):
     list_display = ('family', 'inviter', 'invitee_email', 'status', 'created_at', 'expires_at')
     list_filter = ('status',)
     search_fields = ('invitee_email', 'family__name', 'inviter__username')
-
-@admin.register(Report)
-class ReportAdmin(admin.ModelAdmin):
-    list_display = ('name', 'report_type', 'format', 'created_at')
-    list_filter = ('report_type', 'format')
-    search_fields = ('name',)
-
-@admin.register(MLModel)
-class MLModelAdmin(admin.ModelAdmin):
-    list_display = ('user', 'accuracy', 'last_trained', 'training_samples', 'version')
-    readonly_fields = ('last_trained',)

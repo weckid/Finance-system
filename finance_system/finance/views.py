@@ -172,6 +172,11 @@ def site_admin_panel(request):
 @login_required
 def dashboard(request):
     """Панель управления со всеми вкладками"""
+    try:
+        from finance.utils.goal_reminders import create_replenishment_reminders
+        create_replenishment_reminders()
+    except Exception:
+        pass
     user_goals = FinancialGoal.objects.filter(user=request.user)
     user_families_ids = Family.objects.filter(
         Q(created_by=request.user) | Q(members__user=request.user)

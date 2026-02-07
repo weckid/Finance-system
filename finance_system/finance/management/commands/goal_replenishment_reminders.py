@@ -21,7 +21,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Не создавать уведомления, только вывести список.')
-        parser.add_argument('--verbose', '-v', action='store_true', help='Подробный вывод.')
+        parser.add_argument('--verbose', action='store_true', help='Подробный вывод.')
         parser.add_argument('--test', action='store_true', help='Создать тестовое уведомление для первой подходящей цели (игнорируя срок).')
 
     def handle(self, *args, **options):

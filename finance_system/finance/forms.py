@@ -7,7 +7,7 @@ from datetime import date
 from . import models
 from .models import (
     CustomUser, Transaction, Category, Account,
-    FinancialGoal, Budget, Family, CategorizationRule
+    FinancialGoal, Budget, Family
 )
 import re
 import random
