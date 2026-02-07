@@ -26,17 +26,35 @@
                         {% if u.is_active %}
                         <span class="badge bg-success">Активен</span>
                         {% else %}
-                        <span class="badge bg-danger">Заблокирован</span>
+                        <span class="badge bg-danger">Заблокирован</span>{% if u.block_reason %} <small class="text-muted">({{ u.block_reason|truncatechars:30 }})</small>{% endif %}
                         {% endif %}
                         {% if u.is_staff %}<span class="badge bg-primary ms-1">Админ</span>{% endif %}
                     </td>
                     <td>
                         {% if u.id != request.user.id and not u.is_superuser %}
                             {% if u.is_active %}
-                            <form method="post" action="{% url 'admin_user_block' u.pk %}" class="d-inline" onsubmit="return confirm('Заблокировать {{ u.username }}?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-warning btn-sm">Заблокировать</button>
-                            </form>
+                            <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#blockModal{{ u.pk }}">Заблокировать</button>
+                            <div class="modal fade" id="blockModal{{ u.pk }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Заблокировать {{ u.username }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'admin_user_block' u.pk %}">
+                                            {% csrf_token %}
+                                            <div class="modal-body">
+                                                <label class="form-label">Причина блокировки (будет показана пользователю при попытке входа)</label>
+                                                <textarea name="block_reason" class="form-control" rows="3" placeholder="Например: Нарушение правил, подозрительная активность..."></textarea>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                                <button type="submit" class="btn btn-warning">Заблокировать</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                             {% else %}
                             <form method="post" action="{% url 'admin_user_unblock' u.pk %}" class="d-inline">
                                 {% csrf_token %}

@@ -1,71 +1,168 @@
-# Настройка GitHub репозитория через Cursor
+# GitHub, Git, PostgreSQL и DBeaver
 
-## 1. Создание репозитория на GitHub
+## 1. Исправление ошибки Git push
 
-1. Перейдите на [github.com](https://github.com) и войдите в аккаунт
-2. Нажмите **"+"** → **New repository**
-3. Укажите имя (например, `finance-system`)
-4. Выберите **Public** или **Private**
-5. **НЕ** ставьте галочки "Add README" или ".gitignore" — проект уже есть локально
-6. Нажмите **Create repository**
+Ошибка `src refspec main does not match any` возникает, потому что **коммит не был создан** (из‑за ошибки с email). Выполните:
 
-## 2. Инициализация Git и первый коммит (через Cursor)
+```powershell
+# 1. Настройте имя и email (обязательно)
+git config --global user.email "ваш@email.com"
+git config --global user.name "Ваше Имя"
 
-### В терминале Cursor (Ctrl+` или View → Terminal):
-
-```bash
-# Перейти в папку проекта
+# 2. Первый коммит
 cd c:\Users\Пользователь\Desktop\PythonProject
-
-# Инициализировать Git (если ещё не инициализирован)
-git init
-
-# Добавить удалённый репозиторий (замените USERNAME и REPO на свои)
-git remote add origin https://github.com/USERNAME/REPO.git
-
-# Добавить все файлы
 git add .
+git commit -m "Initial commit: финансовая система"
 
-# Первый коммит
-git commit -m "Initial commit: финансовая система с целями, транзакциями, Excel импортом"
-
-# Отправить на GitHub
+# 3. Отправка (если ветка master, используйте master вместо main)
+git branch -M main
 git push -u origin main
 ```
 
-Если ветка называется `master`, замените `main` на `master`.
+Если репозиторий на GitHub создан с веткой `master`:
 
-## 3. Коммитить каждый запрос
+```powershell
+git push -u origin master
+```
 
-### Вариант A: Через Cursor (Source Control)
+---
 
-1. Нажмите иконку **Source Control** (ветка) в левой панели или `Ctrl+Shift+G`
-2. Увидите список изменённых файлов
-3. Напишите сообщение коммита в поле сверху (например: "Добавлены иконки вместо кнопок для целей")
-4. Нажмите ✓ **Commit**
-5. Нажмите **Sync** или **Push** для отправки на GitHub
+## 2. Подключение PostgreSQL
 
-### Вариант B: Через терминал
+### Установка PostgreSQL
 
-```bash
+1. Скачайте: https://www.postgresql.org/download/windows/
+2. Установите (запомните пароль пользователя `postgres`).
+3. Создайте базу и пользователя (в pgAdmin или psql):
+
+```sql
+CREATE DATABASE finance_db;
+CREATE USER finance_user WITH PASSWORD 'ваш_пароль';
+GRANT ALL PRIVILEGES ON DATABASE finance_db TO finance_user;
+ALTER DATABASE finance_db OWNER TO finance_user;
+```
+
+### Настройка Django (после создания .env)
+
+1. Файл `.env` уже создан в папке `finance_system/`. Заполните его:
+
+```
+DB_ENGINE=postgresql
+DB_NAME=finance_db
+DB_USER=finance_user
+DB_PASSWORD=ваш_пароль
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+2. Установите драйвер:
+
+```powershell
+pip install psycopg2-binary
+```
+
+3. Миграции:
+
+```powershell
+cd finance_system
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+---
+
+## 3. Подключение к PostgreSQL через DBeaver
+
+1. Установите DBeaver: https://dbeaver.io/download/
+
+2. Запустите DBeaver → **База данных** → **Новое подключение** → **PostgreSQL**.
+
+3. Параметры:
+   - **Host:** `localhost`
+   - **Port:** `5432`
+   - **Database:** `finance_db`
+   - **Username:** `finance_user` (или `postgres`)
+   - **Password:** пароль пользователя
+   - Можно включить **«Сохранить пароль»**.
+
+4. Нажмите **Тест подключения** → **ОК**.
+
+5. В левой панели откройте базу → **Схемы** → **public** → таблицы.
+
+---
+
+## 4. Шаги после создания .env
+
+1. Установите драйвер PostgreSQL (если ещё не установлен):
+   ```powershell
+   pip install psycopg2-binary
+   ```
+
+2. Создайте базу в PostgreSQL (через pgAdmin или DBeaver):
+   ```sql
+   CREATE DATABASE finance_db;
+   ```
+
+3. Выполните миграции:
+   ```powershell
+   cd c:\Users\Пользователь\Desktop\PythonProject\finance_system
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
+
+4. Запустите сервер:
+   ```powershell
+   python manage.py runserver
+   ```
+
+5. **Важно:** `.env` уже в `.gitignore` — не коммитьте его (там пароли).
+
+---
+
+## 5. db.sqlite3 и PostgreSQL
+
+**Удалять db.sqlite3 не обязательно.** При включённом PostgreSQL (через .env) Django использует PostgreSQL. Файл sqlite3 остаётся неиспользуемым — его можно удалить для порядка, но это не обязательно.
+
+---
+
+## 6. Не получается закоммитить
+
+Чаще всего причина — не настроен Git или ещё не создан первый коммит.
+
+1. Настройте имя и email:
+   ```powershell
+   git config --global user.email "ваш@email.com"
+   git config --global user.name "Ваше Имя"
+   ```
+
+2. Сделайте первый коммит:
+   ```powershell
+   cd c:\Users\Пользователь\Desktop\PythonProject
+   git add .
+   git commit -m "Initial commit"
+   ```
+
+3. Отправьте на GitHub:
+   ```powershell
+   git push -u origin main
+   ```
+   Если основная ветка `master`:
+   ```powershell
+   git push -u origin master
+   ```
+
+---
+
+## 7. Как коммитить дальше
+
+```powershell
 git add .
 git commit -m "Описание изменений"
 git push
 ```
 
-## 4. Рекомендуемые сообщения коммитов
+Примеры сообщений:
+- `Круговой график расходов, фикс накоплений`
+- `Только полоса прогресса для расходов`
 
-- `Иконки вместо кнопок добавления/снятия в целях`
-- `Flip-карточки: фон и пополнения по участникам`
-- `Импорт транзакций из Excel`
-- `Исправление отображения даты транзакций`
-
-## 5. .gitignore
-
-Убедитесь, что в `.gitignore` есть:
-- `db.sqlite3` — база данных
-- `__pycache__/`
-- `*.pyc`
-- `venv/` или `env/`
-- `media/` — загруженные файлы
-- `.env` — секреты
+Либо через **Source Control** в Cursor: вкладка «Source Control», сообщение коммита и кнопка **Commit** + **Push**.

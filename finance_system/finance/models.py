@@ -8,6 +8,7 @@ import json
 class CustomUser(AbstractUser):
     """Расширенная модель пользователя"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    block_reason = models.TextField(blank=True, null=True, verbose_name='Причина блокировки')
     phone = models.CharField(max_length=20, blank=True, null=True)
     telegram_id = models.CharField(max_length=100, blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)

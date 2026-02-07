@@ -148,7 +148,7 @@ def site_admin_users(request):
 @login_required
 @staff_required
 def site_admin_user_block(request, pk):
-    """Заблокировать пользователя."""
+    """Заблокировать пользователя с указанием причины."""
     user = get_object_or_404(CustomUser, pk=pk)
     if user == request.user:
         messages.error(request, 'Нельзя заблокировать себя.')
@@ -157,7 +157,9 @@ def site_admin_user_block(request, pk):
         messages.error(request, 'Нельзя заблокировать суперпользователя.')
         return redirect('admin_users')
     if request.method == 'POST':
+        reason = (request.POST.get('block_reason') or '').strip() or None
         user.is_active = False
+        user.block_reason = reason
         user.save()
         messages.success(request, f'Пользователь {user.username} заблокирован.')
     return redirect('admin_users')
@@ -170,6 +172,7 @@ def site_admin_user_unblock(request, pk):
     user = get_object_or_404(CustomUser, pk=pk)
     if request.method == 'POST':
         user.is_active = True
+        user.block_reason = None
         user.save()
         messages.success(request, f'Пользователь {user.username} разблокирован.')
     return redirect('admin_users')

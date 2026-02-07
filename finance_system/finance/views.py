@@ -61,8 +61,17 @@ def handle_auth(request):
             if login_form.is_valid():
                 username = login_form.cleaned_data.get('username')
                 password = login_form.cleaned_data.get('password')
+                from .models import CustomUser
+                blocked_user = CustomUser.objects.filter(Q(username=username) | Q(email=username)).first()
+                if blocked_user and not blocked_user.is_active:
+                    reason = blocked_user.block_reason or 'Не указана'
+                    messages.error(request, f'Аккаунт заблокирован. Причина: {reason}')
+                    return render(request, 'finance/auth.html', {
+                        'login_form': login_form,
+                        'register_form': CustomUserCreationForm(),
+                        'active_tab': 'login',
+                    })
                 user = authenticate(username=username, password=password)
-
                 if user is not None:
                     login(request, user)
                     messages.success(request, f'Добро пожаловать, {user.username}!')
@@ -209,31 +218,10 @@ def dashboard(request):
         else:
             cat['percentage'] = 0
 
-    # График расходов по месяцам (последние 12 месяцев)
-    from django.db.models.functions import TruncMonth
-    expense_monthly = Transaction.objects.filter(
-        user=request.user, type='expense'
-    ).annotate(month=TruncMonth('date')).values('month').annotate(
-        total=Sum('amount')
-    ).order_by('month')
-    expense_chart_months = []
-    expense_chart_data = []
-    today = timezone.now().date()
-    for i in range(11, -1, -1):
-        y, m = today.year, today.month - i
-        while m <= 0:
-            m += 12
-            y -= 1
-        month_str = date(y, m, 1).strftime('%Y-%m')
-        expense_chart_months.append(month_str)
-        val = 0
-        for row in expense_monthly:
-            if row.get('month'):
-                row_str = row['month'].strftime('%Y-%m') if hasattr(row['month'], 'strftime') else str(row['month'])[:7]
-                if row_str == month_str:
-                    val = float(row.get('total') or 0)
-                    break
-        expense_chart_data.append(val)
+    # График расходов по категориям (круговая диаграмма)
+    expense_chart_labels = list(category_stats.keys())
+    expense_chart_data = [float(cat['amount']) for cat in category_stats.values()]
+    expense_chart_colors = [cat.get('color') or '#4361ee' for cat in category_stats.values()]
 
     user_families = Family.objects.filter(
         Q(created_by=request.user) | Q(members__user=request.user)
@@ -259,9 +247,9 @@ def dashboard(request):
         'category_count': categories.count(),
         'system_category_count': categories.filter(is_system=True).count(),
         'category_stats': category_stats,
-        'expense_chart_months': json.dumps(expense_chart_months),
+        'expense_chart_labels': json.dumps(expense_chart_labels),
         'expense_chart_data': json.dumps(expense_chart_data),
-        'expense_progress_pct': min(100, int(total_expenses) / max(100000, int(total_expenses)) * 100) if total_expenses else 0,
+        'expense_chart_colors': json.dumps(expense_chart_colors),
         'active_tab': request.GET.get('tab', 'overview'),
     }
 
@@ -928,7 +916,7 @@ def family_detail(request, family_id):
     for row in contributions_raw:
         month_val = row.get('month')
         if month_val:
-            month_str = formats.date_format(month_val, 'Y-m')
+            month_str = month_val.strftime('%Y-%m') if hasattr(month_val, 'strftime') else str(month_val)[:7]
             gid = row.get('goal_id')
             gname = row.get('goal__name') or 'Цель'
             if gid not in by_goal:
@@ -1172,7 +1160,7 @@ def family_admin_chart(request, family_id):
     for row in contributions_raw:
         month_val = row.get('month')
         if month_val:
-            month_str = formats.date_format(month_val, 'Y-m')
+            month_str = month_val.strftime('%Y-%m') if hasattr(month_val, 'strftime') else str(month_val)[:7]
             months_set.add(month_str)
             gid = row.get('goal_id')
             by_goal[gid]['name'] = row.get('goal__name') or 'Цель'

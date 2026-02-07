@@ -285,9 +285,6 @@
             <div class="stat-card">
                 <div class="stat-value text-danger">{{ total_expenses|floatformat:0 }} ₽</div>
                 <div class="stat-label">Расходы</div>
-                <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ expense_progress_pct }}%" aria-valuenow="{{ expense_progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
                 <small class="text-muted">{{ transaction_count }} транзакций</small>
             </div>
 
@@ -548,7 +545,7 @@
     <div class="dashboard-content" id="transactionsContent">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2>Транзакции</h2>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap align-items-center">
                 <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#addTransactionForm" aria-expanded="false">
                     <i class="bi bi-plus-circle me-1"></i>Добавить
                 </button>
@@ -641,34 +638,39 @@
             </div>
         </div>
 
-        <!-- График расходов по месяцам -->
+        <!-- График расходов по категориям -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-graph-up me-1"></i>Расходы по месяцам</h5>
+                <h5 class="mb-0"><i class="bi bi-pie-chart me-1"></i>Расходы по категориям</h5>
             </div>
             <div class="card-body">
-                <div style="position:relative;height:220px;">
+                {% if expense_chart_labels %}
+                <div style="position:relative;height:280px;">
                     <canvas id="expenseChart"></canvas>
                 </div>
+                {% else %}
+                <p class="text-muted text-center py-4 mb-0">Нет данных о расходах</p>
+                {% endif %}
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         <script>
         (function() {
-            var months = {{ expense_chart_months|safe }};
+            var labels = {{ expense_chart_labels|safe }};
             var data = {{ expense_chart_data|safe }};
-            if (typeof months === 'string') months = JSON.parse(months);
+            var colors = {{ expense_chart_colors|safe }};
+            if (typeof labels === 'string') labels = JSON.parse(labels);
             if (typeof data === 'string') data = JSON.parse(data);
+            if (typeof colors === 'string') colors = JSON.parse(colors);
             var ctx = document.getElementById('expenseChart');
-            if (ctx && months && data && typeof Chart !== 'undefined') {
-                var colors = ['#dc3545','#fd7e14','#ffc107','#28a745','#20c997','#17a2b8','#6610f2','#e83e8c','#6f42c1','#fd7e14','#28a745','#17a2b8'];
+            if (ctx && labels && labels.length > 0 && data && data.length > 0 && typeof Chart !== 'undefined') {
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: months,
+                        labels: labels,
                         datasets: [{
                             data: data,
-                            backgroundColor: colors.slice(0, months.length),
+                            backgroundColor: colors,
                             borderWidth: 2
                         }]
                     },
@@ -704,7 +706,7 @@
                 <div class="mb-3">
                     <div class="d-flex justify-content-between mb-1">
                         <div>
-                            <span style="display: inline-block; width: 12px; height: 12px; background-color: {{ stat.color|default:'#007bff' }}; border-radius: 2px; margin-right: 8px;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; background-color: {{ stat.color|default:'#4361ee' }}; border-radius: 2px; margin-right: 8px;"></span>
                             <span>{{ cat_name }}</span>
                         </div>
                         <div>
@@ -712,8 +714,8 @@
                             <small class="text-muted ms-2">{{ stat.percentage|floatformat:1 }}%</small>
                         </div>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar" style="width: {{ stat.percentage }}%; background-color: {{ stat.color|default:'#007bff' }}"></div>
+                    <div style="height: 8px; background-color: #e9ecef; border-radius: 4px; overflow: hidden;">
+                        <div style="width: {{ stat.percentage|stringformat:".1f" }}%; height: 100%; background-color: {{ stat.color|default:'#4361ee' }}; min-width: 0;"></div>
                     </div>
                 </div>
                 {% endfor %}
